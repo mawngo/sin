@@ -40,7 +40,7 @@ func (f *fileAdapter) Save(ctx context.Context, source string, pathElem string, 
 }
 
 func (f *fileAdapter) Del(_ context.Context, pathElem string, pathElems ...string) error {
-	path := filepath.Join(append([]string{pathElem}, pathElems...)...)
+	path := filepath.Join(append([]string{f.Dir, pathElem}, pathElems...)...)
 	return os.Remove(path)
 }
 
@@ -53,13 +53,19 @@ func (f *fileAdapter) ListFileNames(_ context.Context, pathElems ...string) ([]s
 		return nil, err
 	}
 
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+
 	files := make([]string, 0)
-	err := filepath.Walk(path, func(path string, info os.FileInfo, _ error) error {
-		if !info.IsDir() {
-			files = append(files, path)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
 		}
-		return nil
-	})
+		files = append(files, entry.Name())
+	}
+
 	return files, err
 }
 
