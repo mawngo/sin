@@ -1,5 +1,6 @@
 {
     "name": "backup_file",
+    "BackupTempDir": "D:\\Bak",
     "keepTempFile": true,
     "frequency": "2m",
     "keep": 7,

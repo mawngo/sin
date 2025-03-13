@@ -13,6 +13,7 @@ import (
 	"sin/internal/core"
 	"sin/internal/store"
 	"sin/internal/utils"
+	"strings"
 )
 
 func NewFileCmd(app *core.App) *cobra.Command {
@@ -44,7 +45,17 @@ func NewFileCmd(app *core.App) *cobra.Command {
 				return
 			}
 
-			dest := filepath.Join(app.Config.BackupTempDir, filepath.Base(source)+core.BackupFileExt)
+			destFilename := app.Name
+			if isdir {
+				destFilename += ".zip"
+			} else {
+				_, extname, hasExt := strings.Cut(filepath.Base(source), ".")
+				if hasExt {
+					destFilename += "." + extname
+				}
+			}
+
+			dest := filepath.Join(app.Config.BackupTempDir, destFilename+core.BackupFileExt)
 			err = core.Run(app.Ctx, app.Config.Frequency, func() error {
 				pterm.Println("Creating backup")
 				if isdir {

@@ -66,6 +66,9 @@ func (app *App) Init(path string, name string, automaticEnv bool) error {
 	if err := setupLogging(app); err != nil {
 		return err
 	}
+	if err := os.MkdirAll(app.BackupTempDir, os.ModePerm); err != nil {
+		return err
+	}
 
 	// Handle the lock file.
 	nameLockPath := filepath.Join(os.TempDir(), app.Name+".sinnamelock")
