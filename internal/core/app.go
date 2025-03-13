@@ -120,6 +120,12 @@ func (app *App) Close() error {
 	return app.logFile.Close()
 }
 
+func (app *App) MustClose() {
+	if err := app.Close(); err != nil {
+		pterm.Error.Println(err)
+	}
+}
+
 func setupLogging(app *App) error {
 	f, err := os.OpenFile(fmt.Sprintf("%s%s", app.Name, LogFileExt), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
