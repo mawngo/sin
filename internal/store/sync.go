@@ -33,6 +33,12 @@ func NewSyncer(app *core.App) (*Syncer, error) {
 		adapters: make([]Adapter, 0, len(app.Config.Targets)),
 	}
 	for _, target := range app.Targets {
+		if raw, ok := target["disabled"]; ok {
+			if v, ok := raw.(bool); ok && v {
+				continue
+			}
+		}
+
 		if raw, ok := target["type"]; !ok {
 			return nil, errors.New("missing type in config targets")
 		} else if _, ok := raw.(string); !ok {
@@ -68,18 +74,16 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 	}
 
 	filename := strings.TrimSuffix(filepath.Base(source), core.BackupFileExt)
-	pterm.Printf("Start sync %s to %d destinations\n", filename, len(s.adapters))
+	pterm.Printf("Start sync to %d destinations\n", len(s.adapters))
 	successes := make([]Adapter, 0, len(s.adapters))
 	for _, adapter := range s.adapters {
 		conf := adapter.Config()
-		if conf.Disabled {
-			continue
-		}
 		if conf.Each > 1 && s.iter%int64(conf.Each) != 0 {
 			slog.Info("Skip sync due to config",
 				slog.String("adapter", conf.Name),
 				slog.String("filename", filename),
 				slog.Int("each", conf.Each))
+			pterm.Success.Println("Skipped sync", conf.Name)
 			continue
 		}
 
@@ -98,7 +102,7 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 				slog.Any("err", err))
 			continue
 		}
-		pterm.Success.Println("Success syncing to", conf.Name)
+		pterm.Success.Println("Synced to", conf.Name)
 		successes = append(successes, adapter)
 	}
 
@@ -117,6 +121,7 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 				slog.Any("err", err))
 		}
 	}
+	pterm.Println("Synced to", len(successes), "destinations")
 	return nil
 }
 
