@@ -37,6 +37,7 @@ func NewCLI(app *core.App) *CLI {
 	command.PersistentFlags().Bool("env", false, "Enable automatic environment binding")
 
 	command.AddCommand(NewMongoCmd(app))
+	command.AddCommand(NewFileCmd(app))
 	return &CLI{
 		command: &command,
 	}

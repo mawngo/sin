@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
-	"io/fs"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sin/internal/core"
@@ -22,18 +20,17 @@ import (
 type Syncer struct {
 	adapters []Adapter
 
-	// backup iteration.
+	// iter backup iteration.
 	iter int64
 
-	// Keep the last N backups.
-	// Set to -1 for unlimited backup.
-	Keep int
+	// keep the last N backups.
+	keep int
 }
 
 func NewSyncer(app *core.App) (*Syncer, error) {
 	s := Syncer{
-		Keep:     app.Keep,
-		adapters: make([]Adapter, len(app.Config.Targets)),
+		keep:     app.Keep,
+		adapters: make([]Adapter, 0, len(app.Config.Targets)),
 	}
 	for _, target := range app.Targets {
 		if raw, ok := target["type"]; !ok {
@@ -66,17 +63,13 @@ func NewSyncer(app *core.App) (*Syncer, error) {
 }
 
 func (s *Syncer) Sync(ctx context.Context, source string) error {
+	if len(s.adapters) == 0 {
+		return nil
+	}
+
 	filename := strings.TrimSuffix(filepath.Base(source), core.BackupFileExt)
 	pterm.Printf("Start sync %s to %d destinations\n", filename, len(s.adapters))
-
-	f, err := os.Open(source)
-	if err != nil {
-		return fmt.Errorf("error opening backup file %s: %w", source, err)
-	}
-	defer f.Close()
-
 	successes := make([]Adapter, 0, len(s.adapters))
-	errs := make([]error, 0, len(s.adapters))
 	for _, adapter := range s.adapters {
 		conf := adapter.Config()
 		if conf.Disabled {
@@ -95,21 +88,22 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 		slog.Info("Start sync", slog.String("adapter", conf.Name), slog.String("filename", filename))
 
 		// TODO: retry.
-		err := adapter.Save(ctx, f, dest)
+		err := adapter.Save(ctx, source, dest)
 		if err != nil {
+			// Only report instead of stop completely.
 			pterm.Error.Println("Error syncing", err)
 			slog.Error("Error syncing",
 				slog.String("adapter", conf.Name),
 				slog.String("filename", filename),
 				slog.Any("err", err))
-			errs = append(errs, fmt.Errorf("error syncing to %s: %w", conf.Name, err))
 			continue
 		}
+		pterm.Success.Println("Success syncing to", conf.Name)
 		successes = append(successes, adapter)
 	}
 
 	if len(successes) == 0 {
-		return errors.Join(errs...)
+		return nil
 	}
 	s.iter++
 	for _, adapter := range successes {
@@ -123,13 +117,13 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 				slog.Any("err", err))
 		}
 	}
-	return errors.Join(errs...)
+	return nil
 }
 
 // compact deletes old backup to keep the total number of backup bellows Keep config.
 func (s *Syncer) compact(ctx context.Context, adapter Adapter, filename string) error {
 	conf := adapter.Config()
-	keep := max(s.Keep, adapter.Config().Keep)
+	keep := max(s.keep, adapter.Config().Keep)
 	if keep < 1 {
 		slog.Info("Skip delete old backup due to config",
 			slog.String("adapter", conf.Name),
@@ -175,9 +169,9 @@ func (s *Syncer) compact(ctx context.Context, adapter Adapter, filename string) 
 
 // Adapter abstract storage adapter.
 type Adapter interface {
-	// Save saves a file to the storage, error if the file already exists.
+	// Save saves a file to the storage, override if the file already exists.
 	// If extra pathElems are given, pathElems will be joined.
-	Save(ctx context.Context, file fs.File, pathElem string, pathElems ...string) error
+	Save(ctx context.Context, source string, pathElem string, pathElems ...string) error
 
 	// Del removes a file from the storage.
 	// If extra pathElems are given, pathElems will be joined.
@@ -192,16 +186,16 @@ type Adapter interface {
 }
 
 type AdapterConfig struct {
-	Name string
+	Name string `json:"name"`
 
 	// Disabled whether this adapter should be skipped.
-	Disabled bool
+	Disabled bool `json:"disabled"`
 
 	// Keep override the Syncer Keep. Default 0 (using the Syncer Keep).
-	Keep int
+	Keep int `json:"keep"`
 
 	// Each controls the number of actual syncs.
 	// Default it will sync every backup.
 	// If set to number n > 1, it will sync every nth backup.
-	Each int
+	Each int `json:"each"`
 }

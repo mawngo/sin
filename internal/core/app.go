@@ -36,9 +36,9 @@ type Config struct {
 	SentryDSN string `json:"sentryDSN"`
 
 	// BackupTempDir the directory for storing created backup.
-	BackupTempDir string `json:"tempDir"`
+	BackupTempDir string `json:"backupTempDir"`
 	// KeepTempFile does not remove recently created backup after sync.
-	KeepTempFile bool `json:"keepTemp"`
+	KeepTempFile bool `json:"KeepTempFile"`
 
 	// Number of backups to keep.
 	Keep int `json:"keep"`

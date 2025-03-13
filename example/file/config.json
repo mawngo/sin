@@ -1,0 +1,25 @@
+{
+    "name": "backup_file",
+    "keepTempFile": true,
+    "frequency": "2m",
+    "keep": 7,
+    "targets": [
+        {
+            "name": "backup1",
+            "type": "file",
+            "dir": "D:\\Bak\\Backup1"
+        },
+        {
+            "name": "backup2",
+            "type": "file",
+            "dir": "D:\\Bak\\Backup2"
+        },
+        {
+            "name": "backup_long_term",
+            "type": "file",
+            "keep": 10,
+            "each": 7,
+            "dir": "D:\\Bak\\Long"
+        }
+    ]
+}

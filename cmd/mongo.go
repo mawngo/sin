@@ -6,13 +6,13 @@ import (
 	"sin/internal/core"
 )
 
-func NewMongoCmd(app *core.App) *cobra.Command {
+func NewMongoCmd(_ *core.App) *cobra.Command {
 	command := cobra.Command{
-		Use:   "mongo <core>",
+		Use:   "mongo <uri>",
 		Args:  cobra.ExactArgs(1),
 		Short: "Run backup for mongo",
-		Run: func(cmd *cobra.Command, args []string) {
-			pterm.Info.Println(app.Name)
+		Run: func(_ *cobra.Command, _ []string) {
+			pterm.Info.Println("Not implemented yet")
 		},
 	}
 
