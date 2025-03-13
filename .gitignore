@@ -1,0 +1,20 @@
+/.idea/
+/bin/
+/build/
+/var/
+/.db/
+
+*.db
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.html
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+go.work
