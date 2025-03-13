@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/pterm/pterm"
@@ -48,8 +49,14 @@ func NewSyncer(app *core.App) (*Syncer, error) {
 		}
 
 		t := target["type"].(string)
+		name := target["name"].(string)
 		switch t {
 		case "file":
+			adapter, err := newFileAdapter(target)
+			if err != nil {
+				return nil, fmt.Errorf("error creating file adapter %s: %w", name, err)
+			}
+			s.adapters = append(s.adapters, adapter)
 		case "s3":
 		default:
 			return nil, errors.New("unknown type in config targets: " + t)
@@ -58,7 +65,7 @@ func NewSyncer(app *core.App) (*Syncer, error) {
 	return &s, nil
 }
 
-func (s *Syncer) Sync(source string) error {
+func (s *Syncer) Sync(ctx context.Context, source string) error {
 	filename := strings.TrimSuffix(filepath.Base(source), core.BackupFileExt)
 	pterm.Printf("Start sync %s to %d destinations\n", filename, len(s.adapters))
 
@@ -88,7 +95,7 @@ func (s *Syncer) Sync(source string) error {
 		slog.Info("Start sync", slog.String("adapter", conf.Name), slog.String("filename", filename))
 
 		// TODO: retry.
-		err := adapter.Save(f, dest)
+		err := adapter.Save(ctx, f, dest)
 		if err != nil {
 			pterm.Error.Println("Error syncing", err)
 			slog.Error("Error syncing",
@@ -106,7 +113,7 @@ func (s *Syncer) Sync(source string) error {
 	}
 	s.iter++
 	for _, adapter := range successes {
-		if err := s.compact(adapter, filename); err != nil {
+		if err := s.compact(ctx, adapter, filename); err != nil {
 			// Currently we ignore compact error as it is not critical, and compact can be run again next sync.
 			// But if the error happens continuously, it could be a problem.
 			// TODO: handle error if it happens continuously on multiple sync.
@@ -120,7 +127,7 @@ func (s *Syncer) Sync(source string) error {
 }
 
 // compact deletes old backup to keep the total number of backup bellows Keep config.
-func (s *Syncer) compact(adapter Adapter, filename string) error {
+func (s *Syncer) compact(ctx context.Context, adapter Adapter, filename string) error {
 	conf := adapter.Config()
 	keep := max(s.Keep, adapter.Config().Keep)
 	if keep < 1 {
@@ -131,7 +138,7 @@ func (s *Syncer) compact(adapter Adapter, filename string) error {
 		return nil
 	}
 
-	names, err := adapter.ListFileNames()
+	names, err := adapter.ListFileNames(ctx)
 	if err != nil {
 		return fmt.Errorf("error listing file names for destinations %s: %w", conf.Name, err)
 	}
@@ -159,7 +166,7 @@ func (s *Syncer) compact(adapter Adapter, filename string) error {
 			slog.String("filename", filename),
 			slog.String("target", name),
 		)
-		if err := adapter.Del(name); err != nil {
+		if err := adapter.Del(ctx, name); err != nil {
 			return fmt.Errorf("error deleting old backup: %w", err)
 		}
 	}
@@ -170,16 +177,16 @@ func (s *Syncer) compact(adapter Adapter, filename string) error {
 type Adapter interface {
 	// Save saves a file to the storage, error if the file already exists.
 	// If extra pathElems are given, pathElems will be joined.
-	Save(file fs.File, pathElem string, pathElems ...string) error
+	Save(ctx context.Context, file fs.File, pathElem string, pathElems ...string) error
 
 	// Del removes a file from the storage.
 	// If extra pathElems are given, pathElems will be joined.
 	// Throws error if the file is a directory.
-	Del(pathElem string, pathElems ...string) error
+	Del(ctx context.Context, pathElem string, pathElems ...string) error
 
 	// ListFileNames return list of file names in the given path.
 	// Return empty if not a directory, pathElems will be joined.
-	ListFileNames(pathElems ...string) ([]string, error)
+	ListFileNames(ctx context.Context, pathElems ...string) ([]string, error)
 
 	Config() AdapterConfig
 }

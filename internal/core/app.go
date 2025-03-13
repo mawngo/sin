@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,9 +22,11 @@ import (
 )
 
 type App struct {
+	Ctx context.Context
 	Config
 	Revision string
 
+	cancel       context.CancelFunc
 	logFile      *os.File
 	nameLockPath string
 }
@@ -41,7 +44,7 @@ type Config struct {
 	Keep int `json:"keep"`
 
 	// Frequency of the backup process.
-	// Support cron with format `cron:<cron>`.
+	// Support cron and duration string.
 	// If not specified, run once and stop.
 	Frequency string `json:"frequency"`
 
@@ -56,6 +59,7 @@ func (app *App) Init(path string, name string, automaticEnv bool) error {
 		BackupTempDir: ".",
 	}
 	app.Revision = loadRevision()
+	app.Ctx, app.cancel = context.WithCancel(context.Background())
 	if err := loadJSONConfigInto(&app.Config, path, automaticEnv); err != nil {
 		return err
 	}
@@ -99,6 +103,7 @@ func (app *App) Init(path string, name string, automaticEnv bool) error {
 
 // Close handle cleanup when shutdown.
 func (app *App) Close() error {
+	defer app.cancel()
 	if app.nameLockPath != "" {
 		err := os.Remove(app.nameLockPath)
 		if err != nil {
