@@ -14,9 +14,7 @@ type CLI struct {
 }
 
 // NewCLI create new CLI instance and setup application core.
-func NewCLI() *CLI {
-	app := &core.App{}
-
+func NewCLI(app *core.App) *CLI {
 	command := cobra.Command{
 		Use:   "sin <type> <core>",
 		Short: "Database backup tools.",
@@ -27,17 +25,15 @@ func NewCLI() *CLI {
 			err := app.Init(configFile, name, env)
 			if err != nil {
 				pterm.Error.Printf("Error initializing: %s\n", err)
+				app.Close()
 				os.Exit(1)
 			}
-		},
-		PersistentPostRunE: func(_ *cobra.Command, _ []string) error {
-			return app.Close()
 		},
 	}
 
 	command.PersistentFlags().SortFlags = false
 	command.PersistentFlags().StringP("config", "c", "", "Specify config file")
-	command.PersistentFlags().String("name", "unnamed", "Name of application, affect output backup and log file name")
+	command.PersistentFlags().String("name", "backup", "Name of output backup and log file")
 	command.PersistentFlags().Bool("env", false, "Enable automatic environment binding")
 
 	command.AddCommand(NewMongoCmd(app))

@@ -14,6 +14,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -22,7 +23,9 @@ import (
 type App struct {
 	Config
 	Revision string
-	logFile  *os.File
+
+	logFile      *os.File
+	nameLockPath string
 }
 
 type Config struct {
@@ -41,8 +44,11 @@ type Config struct {
 	// Support cron with format `cron:<cron>`.
 	// If not specified, run once and stop.
 	Frequency string `json:"frequency"`
+
+	Targets []map[string]any `json:"targets"`
 }
 
+// Init setup application core.
 func (app *App) Init(path string, name string, automaticEnv bool) error {
 	app.Config = Config{
 		Name:          name,
@@ -56,14 +62,53 @@ func (app *App) Init(path string, name string, automaticEnv bool) error {
 	if err := setupLogging(app); err != nil {
 		return err
 	}
+
+	// Handle the lock file.
+	nameLockPath := filepath.Join(os.TempDir(), app.Name+".sinnamelock")
+	if _, err := os.Stat(nameLockPath); err == nil {
+		// Multi instance running with the same name can cause trouble if the user is not careful enough.
+		// So we forbid them from the start.
+		pterm.Error.Println("Another instance of sin is running under the same name: ", app.Name)
+		pterm.Error.Println("Please use different --name")
+		pterm.Info.Println("If there are no other instance of sin running, this could be caused by improper shutdown of previous instance.")
+		pterm.Info.Println("In that case, please remove the lock file: ", nameLockPath)
+		err := errors.New("multiple instance running with same name")
+		slog.Error("Error initializing", slog.Any("err", err))
+		return err
+	}
+	f, err := os.Create(nameLockPath)
+	if err != nil {
+		err := fmt.Errorf("cannot create lock file: %w", err)
+		slog.Error("Error initializing", slog.Any("err", err))
+		return err
+	}
+	defer f.Close()
+	app.nameLockPath = nameLockPath
+
+	if app.Config.SentryDSN != "" {
+		// Make sure we can connect to sentry.
+		slog.Warn("Ping sentry", slog.String("status", "initialized"))
+	}
 	// Make sure slog logger work.
 	slog.Info("Initialized",
 		slog.String("name", app.Name),
-		slog.String("revision", app.Revision))
+		slog.String("revision", app.Revision),
+		slog.Bool("env", automaticEnv))
 	return nil
 }
 
+// Close handle cleanup when shutdown.
 func (app *App) Close() error {
+	if app.nameLockPath != "" {
+		err := os.Remove(app.nameLockPath)
+		if err != nil {
+			pterm.Error.Println("Error removing lock file", app.nameLockPath, err)
+			slog.Error("Error shutdown",
+				slog.String("path", app.nameLockPath),
+				slog.Any("err", fmt.Errorf("cannot remove lock file %w", err)),
+			)
+		}
+	}
 	if app.SentryDSN != "" {
 		sentry.Flush(5 * time.Second)
 	}
