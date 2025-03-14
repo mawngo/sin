@@ -122,7 +122,10 @@ func (app *App) Close() error {
 	if app.SentryDSN != "" {
 		sentry.Flush(5 * time.Second)
 	}
-	return app.logFile.Close()
+	if app.logFile != nil {
+		return app.logFile.Close()
+	}
+	return nil
 }
 
 func (app *App) MustClose() {
