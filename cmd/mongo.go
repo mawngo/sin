@@ -20,7 +20,7 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 	command := cobra.Command{
 		Use:   "mongo <uri/config file>",
 		Args:  cobra.ExactArgs(1),
-		Short: "Run backup for mongo",
+		Short: "Run backup for mongo using mongodump",
 		Run: func(cmd *cobra.Command, args []string) {
 			uri := args[0]
 			useConfigFile := false
@@ -43,12 +43,23 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 				return
 			}
 
-			dest := filepath.Join(app.Config.BackupTempDir, app.Name+".gz"+core.BackupFileExt)
 			mongodump := lo.Must(cmd.Flags().GetString("mongodump"))
+			enableGzip := lo.Must(cmd.Flags().GetBool("gzip"))
+
+			destFileName := app.Name
+			if enableGzip {
+				destFileName += ".gz" + core.BackupFileExt
+			} else {
+				destFileName += core.BackupFileExt
+			}
+
+			dest := filepath.Join(app.Config.BackupTempDir, destFileName)
 			dumpArgs := []string{
 				"--quiet",
-				"--gzip",
 				"--archive=" + dest,
+			}
+			if enableGzip {
+				dumpArgs = append(dumpArgs, "--gzip")
 			}
 			if useConfigFile {
 				dumpArgs = append(dumpArgs, "--config", uri)
@@ -59,6 +70,10 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 			err = core.Run(app.Ctx, app.Config.Frequency, func() error {
 				command := exec.CommandContext(app.Ctx, mongodump, dumpArgs...)
 				pterm.Println("Creating backup")
+
+				pterm.Debug.Println("Removing old backup")
+				_ = os.Remove(dest)
+
 				start := time.Now()
 				if err := command.Run(); err != nil {
 					pterm.Error.Println(err)
@@ -80,5 +95,6 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 		},
 	}
 	command.Flags().String("mongodump", "mongodump", "Mongodump command/binary location")
+	command.Flags().Bool("gzip", false, "Enable gzip compression")
 	return &command
 }
