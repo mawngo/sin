@@ -69,9 +69,9 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 
 			err = core.Run(app.Ctx, app.Config.Frequency, func() error {
 				command := exec.CommandContext(app.Ctx, mongodump, dumpArgs...)
-				pterm.Println("Creating backup")
+				pterm.Println("Creating local backup")
 
-				pterm.Debug.Println("Removing old backup")
+				pterm.Debug.Println("Removing old local backup")
 				_ = os.Remove(dest)
 
 				start := time.Now()
@@ -79,8 +79,12 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 					pterm.Error.Println(err)
 					return fmt.Errorf("error running mongodump: %w", err)
 				}
-				pterm.Println("Backup created took", time.Since(start).String())
-				slog.Info("Backup created", slog.String("name", app.Name), slog.String("took", time.Since(start).String()))
+				pterm.Println("Local backup created took", time.Since(start).String())
+				slog.Info("Local backup created", slog.String("name", app.Name), slog.String("took", time.Since(start).String()))
+				if syncher.AdaptersCount() == 0 {
+					pterm.Println("Local backup are kept as there are no targets configured")
+					return nil
+				}
 				err := syncher.Sync(app.Ctx, dest)
 				if !app.KeepTempFile {
 					err = errors.Join(err, os.Remove(dest))

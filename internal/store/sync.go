@@ -76,6 +76,10 @@ func NewSyncer(app *core.App) (*Syncer, error) {
 	return &s, nil
 }
 
+func (s *Syncer) AdaptersCount() int {
+	return len(s.adapters)
+}
+
 func (s *Syncer) Sync(ctx context.Context, source string) error {
 	if len(s.adapters) == 0 {
 		return nil

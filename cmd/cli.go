@@ -35,8 +35,8 @@ func NewCLI(app *core.App) *CLI {
 	command.PersistentFlags().SortFlags = false
 	command.PersistentFlags().StringP("config", "c", "", "specify config file")
 	command.PersistentFlags().String("name", "backup", "name of output backup and log file")
-	command.PersistentFlags().Bool("env", false, "enable automatic environment binding")
 	command.PersistentFlags().Bool("ff", false, "enable fail-fast mode")
+	command.PersistentFlags().Bool("env", false, "(experimental) enable automatic environment binding")
 
 	command.AddCommand(NewMongoCmd(app))
 	command.AddCommand(NewFileCmd(app))

@@ -58,7 +58,7 @@ func NewFileCmd(app *core.App) *cobra.Command {
 
 			dest := filepath.Join(app.Config.BackupTempDir, destFilename+core.BackupFileExt)
 			err = core.Run(app.Ctx, app.Config.Frequency, func() error {
-				pterm.Println("Creating backup")
+				pterm.Println("Creating local backup")
 				start := time.Now()
 				if isdir {
 					if err := zipDir(source, dest); err != nil {
@@ -71,7 +71,11 @@ func NewFileCmd(app *core.App) *cobra.Command {
 						return fmt.Errorf("error creating backup %w", err)
 					}
 				}
-				pterm.Println("Backup created took", time.Since(start).String())
+				pterm.Println("Local backup created took", time.Since(start).String())
+				if syncher.AdaptersCount() == 0 {
+					pterm.Println("Local backup are kept as there are no targets configured")
+					return nil
+				}
 				err := syncher.Sync(app.Ctx, dest)
 				if !app.KeepTempFile {
 					err = errors.Join(err, os.Remove(dest))
