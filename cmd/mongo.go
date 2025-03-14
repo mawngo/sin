@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/pterm/pterm"
@@ -69,6 +70,8 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 
 			err = core.Run(app.Ctx, app.Config.Frequency, func() error {
 				command := exec.CommandContext(app.Ctx, mongodump, dumpArgs...)
+				var stderr bytes.Buffer
+				command.Stderr = &stderr
 				pterm.Println("Creating local backup")
 
 				pterm.Debug.Println("Removing old local backup")
@@ -76,8 +79,9 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 
 				start := time.Now()
 				if err := command.Run(); err != nil {
-					pterm.Error.Println(err)
-					return fmt.Errorf("error running mongodump: %w", err)
+					msg := stderr.String()
+					pterm.Error.Println(msg)
+					return fmt.Errorf("error running mongodump [%s]: %w", msg[:max(len(msg), 100)], err)
 				}
 				pterm.Println("Local backup created took", time.Since(start).String())
 				slog.Info("Local backup created", slog.String("name", app.Name), slog.String("took", time.Since(start).String()))

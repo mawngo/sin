@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"compress/gzip"
 	"errors"
 	"fmt"
@@ -63,6 +64,8 @@ func NewPGCmd(app *core.App) *cobra.Command {
 				}
 
 				command := exec.CommandContext(app.Ctx, pgdump, dumpArgs...)
+				var stderr bytes.Buffer
+				command.Stderr = &stderr
 				var w io.Writer = f
 				if enableGzip {
 					gzw := gzip.NewWriter(w)
@@ -82,8 +85,9 @@ func NewPGCmd(app *core.App) *cobra.Command {
 					return fmt.Errorf("error piping pg_dump output to file %s: %w", dest, err)
 				}
 				if err := command.Wait(); err != nil {
-					pterm.Error.Println(err)
-					return fmt.Errorf("error running pg_dump: %w", err)
+					msg := stderr.String()
+					pterm.Error.Println(msg)
+					return fmt.Errorf("error running pg_dump [%s]: %w", msg[:max(len(msg), 100)], err)
 				}
 
 				pterm.Println("Local backup created took", time.Since(start).String())
