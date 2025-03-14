@@ -10,6 +10,8 @@ import (
 
 var _ Adapter = (*fileAdapter)(nil)
 
+// fileAdapter is a local file adapter.
+// fileAdapter is not safe for concurrent use.
 type fileAdapter struct {
 	AdapterConfig
 	Dir string `json:"dir"`

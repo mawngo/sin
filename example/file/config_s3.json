@@ -1,0 +1,36 @@
+{
+    "name": "test_backup",
+    "BackupTempDir": "D:\\Bak",
+    "keepTempFile": true,
+    "frequency": "2m",
+    "keep": 7,
+    "targets": [
+        {
+            "name": "local",
+            "type": "file",
+            "dir": "D:\\Bak\\Local"
+        },
+        {
+            "name": "ovh",
+            "type": "s3",
+            "basePath": "test",
+            "keep": 10,
+            "bucket": "my bucket",
+            "each": 7,
+            "region": "sgp",
+            "endpoint": "https://s3.sgp.io.cloud.ovh.net",
+            "accessKeyID": "???",
+            "accessSecret": "???"
+        },
+        {
+            "name": "do",
+            "type": "s3",
+            "basePath": "test",
+            "bucket": "mybucket",
+            "region": "any",
+            "endpoint": "https://sgp1.digitaloceanspaces.com",
+            "accessKeyID": "???",
+            "accessSecret": "???"
+        }
+    ]
+}

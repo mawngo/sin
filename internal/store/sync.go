@@ -61,6 +61,11 @@ func NewSyncer(app *core.App) (*Syncer, error) {
 			}
 			s.adapters = append(s.adapters, adapter)
 		case "s3":
+			adapter, err := newS3Adapter(target)
+			if err != nil {
+				return nil, fmt.Errorf("error creating s3 adapter %s: %w", name, err)
+			}
+			s.adapters = append(s.adapters, adapter)
 		default:
 			return nil, errors.New("unknown type in config targets: " + t)
 		}
@@ -96,7 +101,7 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 		err := adapter.Save(ctx, source, dest)
 		if err != nil {
 			// Only report instead of stop completely.
-			pterm.Error.Println("Error syncing", err)
+			pterm.Error.Println("Error syncing to", conf.Name, err)
 			slog.Error("Error syncing",
 				slog.String("adapter", conf.Name),
 				slog.String("filename", filename),
