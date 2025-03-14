@@ -51,7 +51,7 @@ func newS3Adapter(conf map[string]any) (Adapter, error) {
 		return nil, errors.New("missing accessSecret config for s3 adapter " + adapter.Name)
 	}
 	if adapter.Region == "" {
-		return nil, errors.New("missing region config for s3 adapter " + adapter.Name)
+		adapter.Region = "auto"
 	}
 	if adapter.PartSizeMB == 0 {
 		adapter.PartSizeMB = 100
