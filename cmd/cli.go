@@ -22,7 +22,8 @@ func NewCLI(app *core.App) *CLI {
 			configFile := lo.Must(cmd.Flags().GetString("config"))
 			name := lo.Must(cmd.Flags().GetString("name"))
 			env := lo.Must(cmd.Flags().GetBool("env"))
-			err := app.Init(configFile, name, env)
+			ff := lo.Must(cmd.Flags().GetBool("ff"))
+			err := app.Init(configFile, name, env, ff)
 			if err != nil {
 				pterm.Error.Printf("Error initializing: %s\n", err)
 				app.MustClose()
@@ -35,6 +36,7 @@ func NewCLI(app *core.App) *CLI {
 	command.PersistentFlags().StringP("config", "c", "", "specify config file")
 	command.PersistentFlags().String("name", "backup", "name of output backup and log file")
 	command.PersistentFlags().Bool("env", false, "enable automatic environment binding")
+	command.PersistentFlags().Bool("ff", false, "enable fail-fast mode")
 
 	command.AddCommand(NewMongoCmd(app))
 	command.AddCommand(NewFileCmd(app))

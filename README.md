@@ -22,7 +22,7 @@ The output backup filename specified by `--name` option.
 Example command:
 
 ```shell
-sin file /mydirectory --config sync_file.json --name mybackup
+sin file example/mydirectory --config sync_file.json --name mybackup
 ```
 
 Will create `mybackup.zip.bak` and sync it to targets specified in `sync_file.json`.
@@ -46,6 +46,10 @@ file using `--config` options.
     // Name of the backup process, this affects the output backup filename.
     // Optional, and can also be specified using `--name` option.
     "name": "backup_file",
+    // Optional, Sentry DSN for error reporting.
+    "sentryDSN": "https://<key>@sentry.io/<project-id>",
+    // Optional, enable fail-fast mode, stop on sync error.
+    "failFast": false,
     // Optional, local backup directory, default to current directory.
     "backupTempDir": ".",
     // If true, the local backup will be kept, otherwise will be deleted after synced to targets.
@@ -99,4 +103,33 @@ file using `--config` options.
         },
     ]
 }
+```
+
+### Lockfile
+
+Multiple instances of `sin` running with the same name to the same target will override each others,
+which is usually unexpected.
+
+To prevent this `sin` create a lock file to prevent multiple instances of same name to run at the same time, and will
+remove the lock file on exit.
+
+### Fail Fast Mode
+
+By default, `sin` only exits when the backup generation process is failed, any errors happened during synchronization
+will be reported, and it will continue running.
+
+To exit on synchronization error, set `failFast` to true in the config file, or use `--ff` options.
+
+## Examples
+
+Backup file/directory:
+
+```shell
+sin file example/file --config sync_file.json --name mybackup
+```
+
+Backup using mongodump:
+
+```shell
+sin mongo mongodb://localhost:27017 --config config.json --name testbackup_pg --gzip
 ```

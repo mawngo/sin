@@ -35,6 +35,7 @@ type Config struct {
 	Name      string `json:"name"`
 	SentryDSN string `json:"sentryDSN"`
 
+	FailFast bool `json:"failFast"`
 	// BackupTempDir the directory for storing created backup.
 	BackupTempDir string `json:"backupTempDir"`
 	// KeepTempFile does not remove recently created backup after sync.
@@ -52,9 +53,10 @@ type Config struct {
 }
 
 // Init setup application core.
-func (app *App) Init(path string, name string, automaticEnv bool) error {
+func (app *App) Init(path string, name string, automaticEnv bool, failFast bool) error {
 	app.Config = Config{
 		Name:          name,
+		FailFast:      failFast,
 		Keep:          -1,
 		BackupTempDir: ".",
 	}

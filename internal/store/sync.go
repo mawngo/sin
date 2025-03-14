@@ -20,6 +20,8 @@ import (
 type Syncer struct {
 	adapters []Adapter
 
+	failFast bool
+
 	// iter backup iteration.
 	iter int64
 
@@ -30,6 +32,7 @@ type Syncer struct {
 func NewSyncer(app *core.App) (*Syncer, error) {
 	s := Syncer{
 		keep:     app.Keep,
+		failFast: app.FailFast,
 		adapters: make([]Adapter, 0, len(app.Config.Targets)),
 	}
 	for _, target := range app.Targets {
@@ -80,6 +83,7 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 
 	filename := strings.TrimSuffix(filepath.Base(source), core.BackupFileExt)
 	pterm.Printf("Start sync to %d destinations\n", len(s.adapters))
+	errs := make([]error, 0, len(s.adapters))
 	successes := make([]Adapter, 0, len(s.adapters))
 	for _, adapter := range s.adapters {
 		conf := adapter.Config()
@@ -107,6 +111,7 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 				slog.String("adapter", conf.Name),
 				slog.String("filename", filename),
 				slog.Any("err", err))
+			errs = append(errs, fmt.Errorf("error syncing %s: %w", conf.Name, err))
 			continue
 		}
 		pterm.Success.Println("Synced to", conf.Name, "took", time.Since(start).String())
@@ -120,11 +125,17 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 	if len(successes) == 0 {
 		slog.Warn("All sync failed/skipped")
 		pterm.Warning.Println("All sync failed/skipped")
+		if s.failFast && len(errs) > 0 {
+			return errors.Join(errs...)
+		}
 		return nil
 	}
+
+	// Compacting.
 	s.iter++
 	for _, adapter := range successes {
 		if err := s.compact(ctx, adapter, filename); err != nil {
+			errs = append(errs, fmt.Errorf("error compacting %s: %w", adapter.Config().Name, err))
 			// Currently we ignore compact error as it is not critical, and compact can be run again next sync.
 			// But if the error happens continuously, it could be a problem.
 			pterm.Warning.Printf("Error compacting %s: %s\n", adapter.Config().Name, err)
@@ -134,6 +145,9 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 		}
 	}
 	pterm.Println("Synced to", len(successes), "destinations")
+	if s.failFast {
+		return errors.Join(errs...)
+	}
 	return nil
 }
 
