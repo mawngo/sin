@@ -64,6 +64,7 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 					pterm.Error.Println(err)
 					return fmt.Errorf("error running mongodump: %w", err)
 				}
+				pterm.Println("Backup created took", time.Since(start).String())
 				slog.Info("Backup created", slog.String("name", app.Name), slog.String("took", time.Since(start).String()))
 				err := syncher.Sync(app.Ctx, dest)
 				if !app.KeepTempFile {

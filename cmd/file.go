@@ -14,6 +14,7 @@ import (
 	"sin/internal/store"
 	"sin/internal/utils"
 	"strings"
+	"time"
 )
 
 func NewFileCmd(app *core.App) *cobra.Command {
@@ -58,6 +59,7 @@ func NewFileCmd(app *core.App) *cobra.Command {
 			dest := filepath.Join(app.Config.BackupTempDir, destFilename+core.BackupFileExt)
 			err = core.Run(app.Ctx, app.Config.Frequency, func() error {
 				pterm.Println("Creating backup")
+				start := time.Now()
 				if isdir {
 					if err := zipDir(source, dest); err != nil {
 						_ = os.Remove(dest)
@@ -69,6 +71,7 @@ func NewFileCmd(app *core.App) *cobra.Command {
 						return fmt.Errorf("error creating backup %w", err)
 					}
 				}
+				pterm.Println("Backup created took", time.Since(start).String())
 				err := syncher.Sync(app.Ctx, dest)
 				if !app.KeepTempFile {
 					err = errors.Join(err, os.Remove(dest))
