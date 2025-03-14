@@ -40,6 +40,7 @@ func NewCLI(app *core.App) *CLI {
 
 	command.AddCommand(NewMongoCmd(app))
 	command.AddCommand(NewFileCmd(app))
+	command.AddCommand(NewPGCmd(app))
 	return &CLI{
 		command: &command,
 	}

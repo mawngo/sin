@@ -133,3 +133,9 @@ Backup using mongodump:
 ```shell
 sin mongo mongodb://localhost:27017 --config config.json --name testbackup_pg --gzip
 ```
+
+Backup using pg_dump:
+
+```shell
+sin pg postgresql://localhost:5432 --config config.json --name testbackup_pg --gzip
+```
