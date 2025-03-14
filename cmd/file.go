@@ -92,7 +92,6 @@ func NewFileCmd(app *core.App) *cobra.Command {
 	return &command
 }
 
-// TODO: again, review this zip code.
 func zipDir(src, dst string) (err error) {
 	file, err := os.Create(dst)
 	if err != nil {
@@ -103,24 +102,31 @@ func zipDir(src, dst string) (err error) {
 	w := zip.NewWriter(file)
 	defer w.Close()
 
+	src, _ = filepath.Abs(src)
+	dir := filepath.Dir(src)
 	walker := func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
+
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+
 		if info.IsDir() {
-			return nil
+			// Add a trailing slash for creating dir.
+			// Must use '/', not filepath.Separator.
+			path = fmt.Sprintf("%s%c", rel, '/')
+			_, err = w.Create(path)
+			return err
 		}
 		file, err := os.Open(path)
 		if err != nil {
 			return err
 		}
 		defer file.Close()
-
-		// Ensure that `path` is not absolute; it should not start with "/".
-		// This snippet happens to work because I don't use
-		// absolute paths, but ensure your real-world code
-		// transforms the path into a zip-root relative path.
-		f, err := w.Create(path)
+		f, err := w.Create(rel)
 		if err != nil {
 			return err
 		}
