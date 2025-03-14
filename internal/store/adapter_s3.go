@@ -24,6 +24,7 @@ var _ Adapter = (*s3Adapter)(nil)
 type s3Adapter struct {
 	AdapterConfig
 	client       *s3.Client
+	PartSizeMB   int    `json:"partSizeMB"`
 	Bucket       string `json:"bucket"`
 	Endpoint     string `json:"endpoint"`
 	AccessKeyID  string `json:"accessKeyID"`
@@ -52,6 +53,9 @@ func newS3Adapter(conf map[string]any) (Adapter, error) {
 	if adapter.Region == "" {
 		return nil, errors.New("missing region config for s3 adapter " + adapter.Name)
 	}
+	if adapter.PartSizeMB == 0 {
+		adapter.PartSizeMB = 100
+	}
 	return &adapter, nil
 }
 
@@ -68,7 +72,7 @@ func (f *s3Adapter) Save(ctx context.Context, source string, pathElem string, pa
 	defer file.Close()
 
 	uploader := manager.NewUploader(s3Client, func(u *manager.Uploader) {
-		u.PartSize = 10 * 1024 * 1024
+		u.PartSize = int64(f.PartSizeMB * 1024 * 1024)
 	})
 	// TODO: should we retry this?
 	_, err = uploader.Upload(ctx, &s3.PutObjectInput{
