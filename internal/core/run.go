@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 	"errors"
+	"github.com/pterm/pterm"
+	"log/slog"
 	"time"
 )
 
@@ -27,8 +29,14 @@ func runInterval(ctx context.Context, dur time.Duration, fn func() error) error 
 		return err
 	}
 	for {
+		startWait := time.Now()
 		select {
 		case <-timer.C:
+			if time.Since(startWait) < 10*time.Second {
+				pterm.Warning.Println("Sync can't keep up with the frequency")
+				pterm.Warning.Println("Sync job take too long or the frequency is too fast")
+				slog.Warn("Slow sync process", slog.String("feq", dur.String()))
+			}
 			timer = time.NewTimer(dur)
 			if err := fn(); err != nil {
 				return err
