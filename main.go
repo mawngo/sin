@@ -16,7 +16,7 @@ func main() {
 	sigs := make(chan os.Signal, 2)
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		_ = <-sigs
+		<-sigs
 		app.MustClose()
 		os.Exit(1)
 	}()

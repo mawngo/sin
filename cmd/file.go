@@ -78,7 +78,7 @@ func NewFileCmd(app *core.App) *cobra.Command {
 
 			if err != nil {
 				pterm.Error.Println(err)
-				slog.Error("Error running", slog.String("name", app.Name), slog.Any("err", err))
+				slog.Error("Fatal error running", slog.String("name", app.Name), slog.Any("err", err))
 			}
 		},
 	}

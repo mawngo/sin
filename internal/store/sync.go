@@ -91,7 +91,8 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 		dest := time.Now().Format("060102_1504_") + filename + core.BackupFileExt
 		slog.Info("Start sync", slog.String("adapter", conf.Name), slog.String("filename", filename))
 
-		// TODO: retry.
+		// Send the file.
+		// The adapter must handle retry if error happens.
 		err := adapter.Save(ctx, source, dest)
 		if err != nil {
 			// Only report instead of stop completely.
@@ -107,6 +108,8 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 	}
 
 	if len(successes) == 0 {
+		slog.Warn("All sync failed/skipped")
+		pterm.Warning.Println("All sync failed/skipped")
 		return nil
 	}
 	s.iter++
@@ -114,7 +117,6 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 		if err := s.compact(ctx, adapter, filename); err != nil {
 			// Currently we ignore compact error as it is not critical, and compact can be run again next sync.
 			// But if the error happens continuously, it could be a problem.
-			// TODO: handle error if it happens continuously on multiple sync.
 			pterm.Warning.Printf("Error compacting %s: %s\n", adapter.Config().Name, err)
 			slog.Warn("Error compacting",
 				slog.String("adapter", adapter.Config().Name),
@@ -141,7 +143,7 @@ func (s *Syncer) compact(ctx context.Context, adapter Adapter, filename string) 
 	if err != nil {
 		return fmt.Errorf("error listing file names for destinations %s: %w", conf.Name, err)
 	}
-	reg, err := regexp.Compile(fmt.Sprintf(`^\d{6}_\d{4}_%s%s$`, filename, core.BackupFileExt))
+	reg, err := regexp.Compile(fmt.Sprintf(`\d{6}_\d{4}_%s%s$`, filename, core.BackupFileExt))
 	if err != nil {
 		return fmt.Errorf("error compiling regexp: %w", err)
 	}
