@@ -94,7 +94,7 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 			}
 		},
 	}
-	command.Flags().String("mongodump", "mongodump", "Mongodump command/binary location")
-	command.Flags().Bool("gzip", false, "Enable gzip compression")
+	command.Flags().String("mongodump", "mongodump", "mongodump command/binary location")
+	command.Flags().Bool("gzip", false, "enable gzip compression")
 	return &command
 }

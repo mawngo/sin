@@ -16,8 +16,8 @@ type CLI struct {
 // NewCLI create new CLI instance and setup application core.
 func NewCLI(app *core.App) *CLI {
 	command := cobra.Command{
-		Use:   "sin <type> <core>",
-		Short: "Database backup tools.",
+		Use:   "sin",
+		Short: "Backup tools",
 		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 			configFile := lo.Must(cmd.Flags().GetString("config"))
 			name := lo.Must(cmd.Flags().GetString("name"))
@@ -32,9 +32,9 @@ func NewCLI(app *core.App) *CLI {
 	}
 
 	command.PersistentFlags().SortFlags = false
-	command.PersistentFlags().StringP("config", "c", "", "Specify config file")
-	command.PersistentFlags().String("name", "backup", "Name of output backup and log file")
-	command.PersistentFlags().Bool("env", false, "Enable automatic environment binding")
+	command.PersistentFlags().StringP("config", "c", "", "specify config file")
+	command.PersistentFlags().String("name", "backup", "name of output backup and log file")
+	command.PersistentFlags().Bool("env", false, "enable automatic environment binding")
 
 	command.AddCommand(NewMongoCmd(app))
 	command.AddCommand(NewFileCmd(app))
