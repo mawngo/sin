@@ -25,7 +25,7 @@ func NewCLI(app *core.App) *CLI {
 			err := app.Init(configFile, name, env)
 			if err != nil {
 				pterm.Error.Printf("Error initializing: %s\n", err)
-				app.Close()
+				app.MustClose()
 				os.Exit(1)
 			}
 		},

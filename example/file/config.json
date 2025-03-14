@@ -2,7 +2,7 @@
     "name": "backup_file",
     "BackupTempDir": "D:\\Bak",
     "keepTempFile": true,
-    "frequency": "2m",
+    "frequency": "*/2 * * * *",
     "keep": 7,
     "targets": [
         {
