@@ -98,6 +98,7 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 
 		// Send the file.
 		// The adapter must handle retry if error happens.
+		start := time.Now()
 		err := adapter.Save(ctx, source, dest)
 		if err != nil {
 			// Only report instead of stop completely.
@@ -108,7 +109,11 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 				slog.Any("err", err))
 			continue
 		}
-		pterm.Success.Println("Synced to", conf.Name)
+		pterm.Success.Println("Synced to", conf.Name, "took", time.Since(start).String())
+		slog.Info("Complete sync",
+			slog.String("adapter", conf.Name),
+			slog.String("filename", filename),
+			slog.String("took", time.Since(start).String()))
 		successes = append(successes, adapter)
 	}
 

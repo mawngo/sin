@@ -27,7 +27,7 @@ func NewFileCmd(app *core.App) *cobra.Command {
 			//nolint:revive
 			if info, err := os.Stat(source); err != nil {
 				pterm.Error.Println(err)
-				slog.Error("Error invalid source file",
+				slog.Error("Fatal error invalid source file",
 					slog.String("name", app.Name),
 					slog.String("source", source),
 					slog.Any("err", err))
@@ -39,7 +39,7 @@ func NewFileCmd(app *core.App) *cobra.Command {
 			syncher, err := store.NewSyncer(app)
 			if err != nil {
 				pterm.Error.Println("Error initialize syncer:", err)
-				slog.Error("Error initialize syncer",
+				slog.Error("Fatal error initialize syncer",
 					slog.String("name", app.Name),
 					slog.Any("err", err))
 				return
