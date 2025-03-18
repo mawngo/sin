@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/getsentry/sentry-go"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/pterm/pterm"
 	slogmulti "github.com/samber/slog-multi"
 	slogsentry "github.com/samber/slog-sentry/v2"
