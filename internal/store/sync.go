@@ -158,7 +158,10 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 // compact deletes old backup to keep the total number of backup bellows Keep config.
 func (s *Syncer) compact(ctx context.Context, adapter Adapter, filename string) error {
 	conf := adapter.Config()
-	keep := max(s.keep, adapter.Config().Keep)
+	keep := adapter.Config().Keep
+	if keep == 0 {
+		keep = s.keep
+	}
 	if keep < 1 {
 		slog.Info("Skip delete old backup due to config",
 			slog.String("adapter", conf.Name),
