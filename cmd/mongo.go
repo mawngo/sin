@@ -81,7 +81,7 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 				if err := command.Run(); err != nil {
 					msg := stderr.String()
 					pterm.Error.Println(msg)
-					return fmt.Errorf("error running mongodump [%s]: %w", msg[:max(len(msg), 100)], err)
+					return fmt.Errorf("error running mongodump [%s]: %w", msg[:min(len(msg), 100)], err)
 				}
 				pterm.Println("Local backup created took", time.Since(start).String())
 				slog.Info("Local backup created", slog.String("name", app.Name), slog.String("took", time.Since(start).String()))

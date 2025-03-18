@@ -88,7 +88,7 @@ func NewPGCmd(app *core.App) *cobra.Command {
 					if err := command.Wait(); err != nil {
 						msg := stderr.String()
 						pterm.Error.Println(msg)
-						return fmt.Errorf("error running pg_dump [%s]: %w", msg[:max(len(msg), 100)], err)
+						return fmt.Errorf("error running pg_dump [%s]: %w", msg[:min(len(msg), 100)], err)
 					}
 					return nil
 				})()
