@@ -151,6 +151,7 @@ func setupLogging(app *App) error {
 
 	err = sentry.Init(sentry.ClientOptions{
 		Dsn:           app.SentryDSN,
+		Release:       app.Name + "@" + app.Revision,
 		EnableTracing: false,
 	})
 	if err != nil {
