@@ -108,7 +108,9 @@ func (app *App) Init(path string, name string, automaticEnv bool, failFast bool)
 
 // Close handle cleanup when shutdown.
 func (app *App) Close() error {
-	defer app.cancel()
+	if app.Ctx != nil {
+		defer app.cancel()
+	}
 	if app.nameLockPath != "" {
 		err := os.Remove(app.nameLockPath)
 		if err != nil {
