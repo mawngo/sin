@@ -56,7 +56,6 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 
 			dest := filepath.Join(app.Config.BackupTempDir, destFileName)
 			dumpArgs := []string{
-				"--quiet",
 				"--archive=" + dest,
 			}
 			if enableGzip {
