@@ -21,6 +21,13 @@ import (
 	"time"
 )
 
+type AppInitConfig struct {
+	ConfigFile   string
+	Name         string
+	AutomaticEnv bool
+	FailFast     bool
+}
+
 type App struct {
 	Ctx context.Context
 	Config
@@ -53,16 +60,16 @@ type Config struct {
 }
 
 // Init setup application core.
-func (app *App) Init(path string, name string, automaticEnv bool, failFast bool) error {
+func (app *App) Init(c AppInitConfig) error {
 	app.Config = Config{
-		Name:          name,
-		FailFast:      failFast,
+		Name:          c.Name,
+		FailFast:      c.FailFast,
 		Keep:          -1,
 		BackupTempDir: ".",
 	}
 	app.Revision = loadRevision()
 	app.Ctx, app.cancel = context.WithCancel(context.Background())
-	if err := loadJSONConfigInto(&app.Config, path, automaticEnv); err != nil {
+	if err := loadJSONConfigInto(&app.Config, c.ConfigFile, c.AutomaticEnv); err != nil {
 		return err
 	}
 	if err := setupLogging(app); err != nil {
@@ -102,7 +109,7 @@ func (app *App) Init(path string, name string, automaticEnv bool, failFast bool)
 	slog.Info("Initialized",
 		slog.String("name", app.Name),
 		slog.String("revision", app.Revision),
-		slog.Bool("env", automaticEnv))
+		slog.Bool("env", c.AutomaticEnv))
 	return nil
 }
 
