@@ -90,7 +90,7 @@ file using `--config` options.
             "basePath": "test/dir",
             // Optional, S3 Region, default "auto".
             "region": "auto",
-            // Optional, S3 Multipart config, only applied if the file >= 1GB.
+            // Optional, S3 Multipart config, only applied if the file >= thresholdMB.
             "multipart": {
                 // Minimum size of the backup to switch to the multipart upload.
                 // Min: 20MB, Max: 4GB.
