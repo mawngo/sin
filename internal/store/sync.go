@@ -80,7 +80,7 @@ func (s *Syncer) AdaptersCount() int {
 	return len(s.adapters)
 }
 
-func (s *Syncer) Sync(ctx context.Context, source string) error {
+func (s *Syncer) Sync(ctx context.Context, source string, start time.Time) error {
 	if len(s.adapters) == 0 {
 		return nil
 	}
@@ -101,7 +101,7 @@ func (s *Syncer) Sync(ctx context.Context, source string) error {
 		}
 
 		pterm.Debug.Println("Start sync to", conf.Name)
-		dest := time.Now().Format("060102_1504_") + filename + core.BackupFileExt
+		dest := start.Format("060102_1504_") + filename + core.BackupFileExt
 		slog.Info("Start sync", slog.String("adapter", conf.Name), slog.String("filename", filename))
 
 		// Send the file.

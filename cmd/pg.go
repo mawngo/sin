@@ -56,28 +56,28 @@ func NewPGCmd(app *core.App) *cobra.Command {
 			err = core.Run(app.Ctx, app.Config.Frequency, func() error {
 				pterm.Println("Creating local backup")
 
-				start := time.Now()
 				pterm.Debug.Println("Truncating old local backup")
 				f, err := os.Create(dest)
 				if err != nil {
 					return fmt.Errorf("error creating backup file %s: %w", dest, err)
 				}
 
+				command := exec.CommandContext(app.Ctx, pgdump, dumpArgs...)
+				var stderr bytes.Buffer
+				command.Stderr = &stderr
+				var w io.Writer = f
+				out, err := command.StdoutPipe()
+				if err != nil {
+					return fmt.Errorf("error creating stdout pipe: %w", err)
+				}
+
+				start := time.Now()
 				err = (func() error {
-					command := exec.CommandContext(app.Ctx, pgdump, dumpArgs...)
-					var stderr bytes.Buffer
-					command.Stderr = &stderr
-					var w io.Writer = f
 					if enableGzip {
 						gzw := gzip.NewWriter(w)
 						defer gzw.Close()
 						defer gzw.Flush()
 						w = gzip.NewWriter(f)
-					}
-
-					out, err := command.StdoutPipe()
-					if err != nil {
-						return fmt.Errorf("error creating stdout pipe: %w", err)
 					}
 					if err := command.Start(); err != nil {
 						return fmt.Errorf("error running command: %w", err)
@@ -102,7 +102,7 @@ func NewPGCmd(app *core.App) *cobra.Command {
 					pterm.Println("Local backup are kept as there are no targets configured")
 					return nil
 				}
-				err = syncher.Sync(app.Ctx, dest)
+				err = syncher.Sync(app.Ctx, dest, start)
 				if !app.KeepTempFile {
 					err = errors.Join(err, os.Remove(dest))
 				}

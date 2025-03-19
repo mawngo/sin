@@ -88,7 +88,7 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 					pterm.Println("Local backup are kept as there are no targets configured")
 					return nil
 				}
-				err := syncher.Sync(app.Ctx, dest)
+				err := syncher.Sync(app.Ctx, dest, start)
 				if !app.KeepTempFile {
 					err = errors.Join(err, os.Remove(dest))
 				}
