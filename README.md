@@ -94,10 +94,10 @@ file using `--config` options.
             "multipart": {
                 // Minimum size of the backup to switch to the multipart upload.
                 // Min: 20MB, Max: 4GB.
-                "thresholdMB": 120,
+                "thresholdMB": 110,
                 // Optional, Upload part size in MB.
                 // Min: 5MB, Max: 4GB.
-                "partSizeMB": 80,
+                "partSizeMB": 50,
                 // Optional, S3 Multipart concurrency.
                 // If unset, let the library decide.
                 "concurrency": 0,

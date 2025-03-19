@@ -21,8 +21,8 @@ import (
 const (
 	MB = 1024 * 1024
 
-	defaultPartSizeMB  = 80
-	defaultThresholdMB = 120
+	defaultPartSizeMB  = 50
+	defaultThresholdMB = 110
 )
 
 var _ Adapter = (*s3Adapter)(nil)
