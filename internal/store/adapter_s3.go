@@ -30,7 +30,6 @@ var _ Adapter = (*s3Adapter)(nil)
 // s3Adapter is not safe for concurrent use.
 type s3Adapter struct {
 	AdapterConfig
-	client       *s3.Client
 	Multipart    s3MultipartConfig `json:"multipart"`
 	Bucket       string            `json:"bucket"`
 	Endpoint     string            `json:"endpoint"`
@@ -38,6 +37,9 @@ type s3Adapter struct {
 	AccessSecret string            `json:"accessSecret"`
 	Region       string            `json:"region"`
 	BasePath     string            `json:"basePath"`
+
+	client          *s3.Client
+	recentlyDeleted map[string]struct{}
 }
 
 type s3MultipartConfig struct {
@@ -191,7 +193,16 @@ func (f *s3Adapter) ListFileNames(ctx context.Context, pathElems ...string) ([]s
 			return filenames, err
 		}
 		for _, obj := range page.Contents {
-			filenames = append(filenames, *obj.Key)
+			key := *obj.Key
+			if p != "" {
+				// Get the relative path.
+				key = strings.TrimPrefix(key, p+"/")
+			}
+			// Skip nested directories.
+			if strings.Index(key, "/") > -1 {
+				continue
+			}
+			filenames = append(filenames, key)
 		}
 	}
 	return filenames, nil
