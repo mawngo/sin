@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"compress/gzip"
 	"errors"
 	"fmt"
@@ -63,8 +62,7 @@ func NewPGCmd(app *core.App) *cobra.Command {
 				}
 
 				command := exec.CommandContext(app.Ctx, pgdump, dumpArgs...)
-				var stderr bytes.Buffer
-				command.Stderr = &stderr
+				command.Stderr = os.Stderr
 				var w io.Writer = f
 				out, err := command.StdoutPipe()
 				if err != nil {
@@ -86,9 +84,7 @@ func NewPGCmd(app *core.App) *cobra.Command {
 						return fmt.Errorf("error piping pg_dump output to file %s: %w", dest, err)
 					}
 					if err := command.Wait(); err != nil {
-						msg := stderr.String()
-						pterm.Error.Println(msg)
-						return fmt.Errorf("error running pg_dump [%s]: %w", msg[:min(len(msg), 100)], err)
+						return fmt.Errorf("error running pg_dump: %w", err)
 					}
 					return nil
 				})()
