@@ -20,7 +20,9 @@ import (
 
 const (
 	MB = 1024 * 1024
-	GB = 1024 * MB
+
+	defaultPartSizeMB  = 80
+	defaultThresholdMB = 120
 )
 
 var _ Adapter = (*s3Adapter)(nil)
@@ -29,13 +31,19 @@ var _ Adapter = (*s3Adapter)(nil)
 type s3Adapter struct {
 	AdapterConfig
 	client       *s3.Client
-	PartSizeMB   int    `json:"partSizeMB"`
-	Bucket       string `json:"bucket"`
-	Endpoint     string `json:"endpoint"`
-	AccessKeyID  string `json:"accessKeyID"`
-	AccessSecret string `json:"accessSecret"`
-	Region       string `json:"region"`
-	BasePath     string `json:"basePath"`
+	Multipart    s3MultipartConfig `json:"multipart"`
+	Bucket       string            `json:"bucket"`
+	Endpoint     string            `json:"endpoint"`
+	AccessKeyID  string            `json:"accessKeyID"`
+	AccessSecret string            `json:"accessSecret"`
+	Region       string            `json:"region"`
+	BasePath     string            `json:"basePath"`
+}
+
+type s3MultipartConfig struct {
+	ThresholdMB int `json:"thresholdMB"`
+	PartSizeMB  int `json:"partSizeMB"`
+	Concurrency int `json:"concurrency"`
 }
 
 func newS3Adapter(conf map[string]any) (Adapter, error) {
@@ -58,8 +66,11 @@ func newS3Adapter(conf map[string]any) (Adapter, error) {
 	if adapter.Region == "" {
 		adapter.Region = "auto"
 	}
-	if adapter.PartSizeMB == 0 {
-		adapter.PartSizeMB = 100
+	if adapter.Multipart.PartSizeMB < 5 || adapter.Multipart.PartSizeMB > 4*1024 {
+		adapter.Multipart.PartSizeMB = defaultPartSizeMB
+	}
+	if adapter.Multipart.ThresholdMB < 20 || adapter.Multipart.ThresholdMB > 4*1024 {
+		adapter.Multipart.PartSizeMB = defaultThresholdMB
 	}
 	return &adapter, nil
 }
@@ -75,7 +86,7 @@ func (f *s3Adapter) Save(ctx context.Context, source string, pathElem string, pa
 	if err != nil {
 		return err
 	}
-	if fi.Size() < 1*GB {
+	if fi.Size() < int64(f.Multipart.ThresholdMB*MB) {
 		return f.upload(ctx, p, file)
 	}
 	return f.uploadMultipart(ctx, p, file)
@@ -87,7 +98,8 @@ func (f *s3Adapter) uploadMultipart(ctx context.Context, p string, file *os.File
 		return err
 	}
 	uploader := manager.NewUploader(s3Client, func(u *manager.Uploader) {
-		u.PartSize = int64(min(f.PartSizeMB, 10) * MB)
+		u.PartSize = int64(min(f.Multipart.PartSizeMB, 10) * MB)
+		u.Concurrency = f.Multipart.Concurrency
 	})
 	// TODO: should we retry this?
 	_, err = uploader.Upload(ctx, &s3.PutObjectInput{

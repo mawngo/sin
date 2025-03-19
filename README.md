@@ -90,8 +90,18 @@ file using `--config` options.
             "basePath": "test/dir",
             // Optional, S3 Region, default "auto".
             "region": "auto",
-            // Optional, Upload part size in MB. Minimum 10.
-            "partSizeMB": 100,
+            // Optional, S3 Multipart config, only applied if the file >= 1GB.
+            "multipart": {
+                // Minimum size of the backup to switch to the multipart upload.
+                // Min: 20MB, Max: 4GB.
+                "thresholdMB": 120,
+                // Optional, Upload part size in MB.
+                // Min: 5MB, Max: 4GB.
+                "partSizeMB": 80,
+                // Optional, S3 Multipart concurrency.
+                // If unset, let the library decide.
+                "concurrency": 0,
+            },
             // S3 Bucket.
             "bucket": "???",
             // S3 Endpoint.
