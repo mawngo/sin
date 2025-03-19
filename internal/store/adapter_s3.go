@@ -72,7 +72,7 @@ func newS3Adapter(conf map[string]any) (Adapter, error) {
 		adapter.Multipart.PartSizeMB = defaultPartSizeMB
 	}
 	if adapter.Multipart.ThresholdMB < 20 || adapter.Multipart.ThresholdMB > 4*1024 {
-		adapter.Multipart.PartSizeMB = defaultThresholdMB
+		adapter.Multipart.ThresholdMB = defaultThresholdMB
 	}
 	return &adapter, nil
 }
