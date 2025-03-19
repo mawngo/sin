@@ -18,6 +18,11 @@ import (
 	"time"
 )
 
+const (
+	MB = 1024 * 1024
+	GB = 1024 * MB
+)
+
 var _ Adapter = (*s3Adapter)(nil)
 
 // s3Adapter is not safe for concurrent use.
@@ -61,18 +66,28 @@ func newS3Adapter(conf map[string]any) (Adapter, error) {
 
 func (f *s3Adapter) Save(ctx context.Context, source string, pathElem string, pathElems ...string) error {
 	p := f.joinPath(pathElem, pathElems...)
-	s3Client, err := f.getClient(ctx)
-	if err != nil {
-		return err
-	}
 	file, err := os.Open(source)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+	fi, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	if fi.Size() < 1*GB {
+		return f.upload(ctx, p, file)
+	}
+	return f.uploadMultipart(ctx, p, file)
+}
 
+func (f *s3Adapter) uploadMultipart(ctx context.Context, p string, file *os.File) error {
+	s3Client, err := f.getClient(ctx)
+	if err != nil {
+		return err
+	}
 	uploader := manager.NewUploader(s3Client, func(u *manager.Uploader) {
-		u.PartSize = int64(f.PartSizeMB * 1024 * 1024)
+		u.PartSize = int64(min(f.PartSizeMB, 10) * MB)
 	})
 	// TODO: should we retry this?
 	_, err = uploader.Upload(ctx, &s3.PutObjectInput{
@@ -88,6 +103,31 @@ func (f *s3Adapter) Save(ctx context.Context, source string, pathElem string, pa
 		return err
 	}
 
+	err = s3.NewObjectExistsWaiter(s3Client).Wait(ctx,
+		&s3.HeadObjectInput{Bucket: aws.String(f.Bucket), Key: aws.String(p)},
+		5*time.Minute)
+	if err != nil {
+		return fmt.Errorf("error waiting for object %s: %w", p, err)
+	}
+	return nil
+}
+
+func (f *s3Adapter) upload(ctx context.Context, p string, file *os.File) error {
+	s3Client, err := f.getClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = try.GetCtx(ctx, func() (*s3.PutObjectOutput, error) {
+		return s3Client.PutObject(ctx, &s3.PutObjectInput{
+			Bucket: aws.String(f.Bucket),
+			Key:    aws.String(p),
+			Body:   file,
+		})
+	}, try.WithFixedBackoff(10*time.Second))
+	if err != nil {
+		return err
+	}
 	err = s3.NewObjectExistsWaiter(s3Client).Wait(ctx,
 		&s3.HeadObjectInput{Bucket: aws.String(f.Bucket), Key: aws.String(p)},
 		5*time.Minute)

@@ -90,7 +90,7 @@ file using `--config` options.
             "basePath": "test/dir",
             // Optional, S3 Region, default "auto".
             "region": "auto",
-            // Optional, Upload part size in MB.
+            // Optional, Upload part size in MB. Minimum 10.
             "partSizeMB": 100,
             // S3 Bucket.
             "bucket": "???",
