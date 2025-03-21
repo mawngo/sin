@@ -2,6 +2,8 @@ package store
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -9,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
 	"github.com/mawngo/go-try/v2"
 	"os"
@@ -43,9 +46,10 @@ type s3Adapter struct {
 }
 
 type s3MultipartConfig struct {
-	ThresholdMB int `json:"thresholdMB"`
-	PartSizeMB  int `json:"partSizeMB"`
-	Concurrency int `json:"concurrency"`
+	ThresholdMB     int  `json:"thresholdMB"`
+	PartSizeMB      int  `json:"partSizeMB"`
+	Concurrency     int  `json:"concurrency"`
+	DisableChecksum bool `json:"disableChecksum"`
 }
 
 func newS3Adapter(conf map[string]any) (Adapter, error) {
@@ -79,6 +83,10 @@ func newS3Adapter(conf map[string]any) (Adapter, error) {
 
 func (f *s3Adapter) Save(ctx context.Context, source string, pathElem string, pathElems ...string) error {
 	p := f.joinPath(pathElem, pathElems...)
+	checksum, err := utils.FileSHA256Checksum(source)
+	if err != nil {
+		return err
+	}
 	file, err := os.Open(source)
 	if err != nil {
 		return err
@@ -89,12 +97,12 @@ func (f *s3Adapter) Save(ctx context.Context, source string, pathElem string, pa
 		return err
 	}
 	if fi.Size() < int64(f.Multipart.ThresholdMB*MB) {
-		return f.upload(ctx, p, file)
+		return f.upload(ctx, p, file, checksum)
 	}
-	return f.uploadMultipart(ctx, p, file)
+	return f.uploadMultipart(ctx, p, file, checksum)
 }
 
-func (f *s3Adapter) uploadMultipart(ctx context.Context, p string, file *os.File) error {
+func (f *s3Adapter) uploadMultipart(ctx context.Context, p string, file *os.File, checksum []byte) error {
 	s3Client, err := f.getClient(ctx)
 	if err != nil {
 		return err
@@ -103,12 +111,20 @@ func (f *s3Adapter) uploadMultipart(ctx context.Context, p string, file *os.File
 		u.PartSize = int64(min(f.Multipart.PartSizeMB, 10) * MB)
 		u.Concurrency = f.Multipart.Concurrency
 	})
-	// TODO: should we retry this?
-	_, err = uploader.Upload(ctx, &s3.PutObjectInput{
+
+	input := &s3.PutObjectInput{
 		Bucket: aws.String(f.Bucket),
 		Key:    aws.String(p),
 		Body:   file,
-	})
+	}
+	if !f.Multipart.DisableChecksum {
+		input.ChecksumAlgorithm = types.ChecksumAlgorithmSha256
+		c := base64.StdEncoding.EncodeToString(checksum)
+		input.ChecksumSHA256 = &c
+	}
+
+	// TODO: should we retry this?
+	_, err = uploader.Upload(ctx, input)
 	if err != nil {
 		var apiErr smithy.APIError
 		if errors.As(err, &apiErr) && apiErr.ErrorCode() == "EntityTooLarge" {
@@ -123,20 +139,23 @@ func (f *s3Adapter) uploadMultipart(ctx context.Context, p string, file *os.File
 	if err != nil {
 		return fmt.Errorf("error waiting for object %s: %w", p, err)
 	}
-	return nil
+	return f.uploadChecksum(ctx, p, hex.EncodeToString(checksum))
 }
 
-func (f *s3Adapter) upload(ctx context.Context, p string, file *os.File) error {
+func (f *s3Adapter) upload(ctx context.Context, p string, file *os.File, checksum []byte) error {
 	s3Client, err := f.getClient(ctx)
 	if err != nil {
 		return err
 	}
 
+	c := base64.StdEncoding.EncodeToString(checksum)
 	_, err = try.GetCtx(ctx, func() (*s3.PutObjectOutput, error) {
 		return s3Client.PutObject(ctx, &s3.PutObjectInput{
-			Bucket: aws.String(f.Bucket),
-			Key:    aws.String(p),
-			Body:   file,
+			Bucket:            aws.String(f.Bucket),
+			Key:               aws.String(p),
+			Body:              file,
+			ChecksumAlgorithm: types.ChecksumAlgorithmSha256,
+			ChecksumSHA256:    &c,
 		})
 	}, try.WithFixedBackoff(10*time.Second))
 	if err != nil {
@@ -148,20 +167,57 @@ func (f *s3Adapter) upload(ctx context.Context, p string, file *os.File) error {
 	if err != nil {
 		return fmt.Errorf("error waiting for object %s: %w", p, err)
 	}
+	return f.uploadChecksum(ctx, p, hex.EncodeToString(checksum))
+}
+
+func (f *s3Adapter) uploadChecksum(ctx context.Context, p string, checksum string) error {
+	s3Client, err := f.getClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = try.GetCtx(ctx, func() (*s3.PutObjectOutput, error) {
+		return s3Client.PutObject(ctx, &s3.PutObjectInput{
+			Bucket: aws.String(f.Bucket),
+			Key:    aws.String(p + utils.ChecksumExt),
+			Body:   strings.NewReader(checksum),
+		})
+	}, try.WithFixedBackoff(10*time.Second))
+	if err != nil {
+		return err
+	}
+	err = s3.NewObjectExistsWaiter(s3Client).Wait(ctx,
+		&s3.HeadObjectInput{Bucket: aws.String(f.Bucket), Key: aws.String(p)},
+		5*time.Minute)
+	if err != nil {
+		return fmt.Errorf("error waiting for object checksum %s: %w", p, err)
+	}
 	return nil
 }
 
 func (f *s3Adapter) Del(ctx context.Context, pathElem string, pathElems ...string) error {
-	return try.DoCtx(ctx, func() error {
-		p := f.joinPath(pathElem, pathElems...)
-		s3Client, err := f.getClient(ctx)
-		if err != nil {
-			return err
-		}
+	p := f.joinPath(pathElem, pathElems...)
+	s3Client, err := f.getClient(ctx)
+	if err != nil {
+		return err
+	}
 
+	err = try.DoCtx(ctx, func() error {
 		_, err = s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
 			Bucket: aws.String(f.Bucket),
 			Key:    aws.String(p),
+		})
+		return err
+	}, try.WithFixedBackoff(10*time.Second))
+
+	if err != nil {
+		return err
+	}
+
+	return try.DoCtx(ctx, func() error {
+		_, err = s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(f.Bucket),
+			Key:    aws.String(p + utils.ChecksumExt),
 		})
 		return err
 	}, try.WithFixedBackoff(10*time.Second))

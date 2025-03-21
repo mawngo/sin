@@ -33,9 +33,14 @@ func (f *fileAdapter) Save(ctx context.Context, source string, pathElem string, 
 	if err := os.MkdirAll(filepath.Dir(dest), os.ModePerm); err != nil {
 		return err
 	}
-	err := utils.CopyFile(ctx, source, dest)
+
+	destChecksum := dest + utils.ChecksumExt
+	err := utils.CreateFileSHA256Checksum(source, destChecksum)
+
+	err = utils.CopyFile(ctx, source, dest)
 	if err != nil {
 		_ = os.Remove(dest)
+		_ = os.Remove(destChecksum)
 		return err
 	}
 	return nil
@@ -43,7 +48,21 @@ func (f *fileAdapter) Save(ctx context.Context, source string, pathElem string, 
 
 func (f *fileAdapter) Del(_ context.Context, pathElem string, pathElems ...string) error {
 	path := filepath.Join(append([]string{f.Dir, pathElem}, pathElems...)...)
-	return os.Remove(path)
+	if info, err := os.Stat(path); err != nil || info.IsDir() {
+		if errors.Is(err, os.ErrNotExist) || info.IsDir() {
+			return nil
+		}
+		return err
+	}
+	checksum := path + utils.ChecksumExt
+	err := os.Remove(path)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(checksum); errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return os.Remove(checksum)
 }
 
 func (f *fileAdapter) ListFileNames(_ context.Context, pathElems ...string) ([]string, error) {

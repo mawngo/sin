@@ -101,6 +101,9 @@ file using `--config` options.
                 // Optional, S3 Multipart concurrency.
                 // If unset, let the library decide.
                 "concurrency": 0,
+                // Optional, disable checksum when multipart uploading.
+                // This option must be true if you are using r2.
+                "disableChecksum": false,
             },
             // S3 Bucket.
             "bucket": "???",

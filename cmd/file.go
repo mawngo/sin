@@ -74,11 +74,13 @@ func NewFileCmd(app *core.App) *cobra.Command {
 				pterm.Println("Local backup created took", time.Since(start).String())
 				if syncher.AdaptersCount() == 0 {
 					pterm.Println("Local backup are kept as there are no targets configured")
-					return nil
+					return utils.CreateFileSHA256Checksum(dest)
 				}
 				err := syncher.Sync(app.Ctx, dest, start)
 				if !app.KeepTempFile {
 					err = errors.Join(err, os.Remove(dest))
+				} else {
+					err = errors.Join(err, utils.CreateFileSHA256Checksum(dest))
 				}
 				return err
 			})

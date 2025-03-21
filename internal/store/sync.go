@@ -213,7 +213,7 @@ type Adapter interface {
 
 	// Del removes a file from the storage.
 	// If extra pathElems are given, pathElems will be joined.
-	// Throws error if the file is a directory.
+	// Do nothing if the file is directory.
 	Del(ctx context.Context, pathElem string, pathElems ...string) error
 
 	// ListFileNames return list of file names in the given path.

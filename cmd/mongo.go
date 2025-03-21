@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sin/internal/core"
 	"sin/internal/store"
+	"sin/internal/utils"
 	"strings"
 	"time"
 )
@@ -82,11 +83,13 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 				slog.Info("Local backup created", slog.String("name", app.Name), slog.String("took", time.Since(start).String()))
 				if syncher.AdaptersCount() == 0 {
 					pterm.Println("Local backup are kept as there are no targets configured")
-					return nil
+					return utils.CreateFileSHA256Checksum(dest)
 				}
 				err := syncher.Sync(app.Ctx, dest, start)
 				if !app.KeepTempFile {
 					err = errors.Join(err, os.Remove(dest))
+				} else {
+					err = errors.Join(err, utils.CreateFileSHA256Checksum(dest))
 				}
 				return err
 			})

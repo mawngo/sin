@@ -6,6 +6,8 @@
 
 *.sinlog
 *.sinbak
+*.sha256.txt
+
 *.db
 *.exe
 *.exe~
