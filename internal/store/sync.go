@@ -5,12 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/pterm/pterm"
-	"github.com/samber/lo"
 	"log/slog"
 	"path/filepath"
-	"regexp"
 	"sin/internal/core"
-	"slices"
+	"sin/internal/utils"
 	"strings"
 	"time"
 )
@@ -31,9 +29,10 @@ type Syncer struct {
 
 func NewSyncer(app *core.App) (*Syncer, error) {
 	s := Syncer{
-		keep:     app.Keep,
-		failFast: app.FailFast,
-		adapters: make([]Adapter, 0, len(app.Config.Targets)),
+		keep:          app.Keep,
+		failFast:      app.FailFast,
+		adapters:      make([]Adapter, 0, len(app.Config.Targets)),
+		pullTargetDir: app.BackupTempDir,
 	}
 	for _, target := range app.Targets {
 		if raw, ok := target["disabled"]; ok {
@@ -174,14 +173,7 @@ func (s *Syncer) compact(ctx context.Context, adapter Adapter, filename string) 
 	if err != nil {
 		return fmt.Errorf("error listing file names for destinations %s: %w", conf.Name, err)
 	}
-	reg, err := regexp.Compile(fmt.Sprintf(`\d{6}_\d{4}_%s%s$`, filename, core.BackupFileExt))
-	if err != nil {
-		return fmt.Errorf("error compiling regexp: %w", err)
-	}
-	names = lo.Filter(names, func(name string, _ int) bool {
-		return reg.MatchString(name)
-	})
-	slices.Sort(names)
+	names = utils.FilterBackupFileNames(names, filename)
 	if len(names) <= keep {
 		slog.Info("Skip delete old backup",
 			slog.String("adapter", conf.Name),
