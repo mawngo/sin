@@ -3,17 +3,18 @@ package store
 import (
 	"bufio"
 	"context"
-	"errors"
-	"fmt"
+	"github.com/mawngo/go-errors"
 	"github.com/samber/lo"
 	"os"
 	"path"
 	"path/filepath"
 	"sin/internal/utils"
+	"slices"
 	"strings"
 )
 
 var _ Adapter = (*mockAdapter)(nil)
+var _ Downloader = (*mockAdapter)(nil)
 
 // mockAdapter only write results into a log file.
 // fileAdapter is not safe for concurrent use.
@@ -91,6 +92,33 @@ func (m *mockAdapter) ListFileNames(_ context.Context, pathElems ...string) ([]s
 	}), nil
 }
 
+func (m *mockAdapter) Download(_ context.Context, destination string, sourcePaths ...string) error {
+	if len(sourcePaths) == 0 {
+		sourcePaths = []string{filepath.Base(destination)}
+	}
+	source := m.joinPath("", sourcePaths...)
+	files, err := m.openLog(m.LogFilename)
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(files, source) {
+		return errors.Wrapf(ErrFileNotFound, "file %s not found", source)
+	}
+
+	f, err := os.Create(destination)
+	if err != nil {
+		return errors.Wrapf(err, "error creating file %s", destination)
+	}
+	f.Close()
+
+	// Optionally, handling checksum verification.
+	sourceChecksum := source + utils.ChecksumExt
+	if slices.Contains(files, sourceChecksum) {
+		return utils.CreateFileSHA256Checksum(destination, destination+utils.ChecksumExt)
+	}
+	return nil
+}
+
 func (m *mockAdapter) Config() AdapterConfig {
 	return m.AdapterConfig
 }
@@ -104,7 +132,7 @@ func (m *mockAdapter) openLog(filenames ...string) ([]string, error) {
 				return nil
 			}
 			if err != nil {
-				return fmt.Errorf("error opening file %s: %w", filename, err)
+				return errors.Wrapf(err, "error opening log file %s", filename)
 			}
 			defer file.Close()
 
@@ -116,7 +144,7 @@ func (m *mockAdapter) openLog(filenames ...string) ([]string, error) {
 				}
 			}
 			if err := scanner.Err(); err != nil {
-				return fmt.Errorf("error reading file %s: %w", filename, err)
+				return errors.Wrapf(err, "error reading log file %s", filename)
 			}
 			return nil
 		})()
@@ -130,13 +158,13 @@ func (m *mockAdapter) openLog(filenames ...string) ([]string, error) {
 func (m *mockAdapter) writeLog(filename string, content []string) error {
 	file, err := os.Create(filename)
 	if err != nil {
-		return fmt.Errorf("error creating file %s: %w", filename, err)
+		return errors.Wrapf(err, "error creating file %s", filename)
 	}
 	defer file.Close()
 
 	for _, c := range content {
 		if _, err := file.WriteString(c + "\n"); err != nil {
-			return fmt.Errorf("error writing file %s: %w", filename, err)
+			return errors.Wrapf(err, "error writing file %s", filename)
 		}
 	}
 	return nil

@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
-	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -13,9 +11,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
+	"github.com/mawngo/go-errors"
 	"github.com/mawngo/go-try/v2"
 	"os"
 	"path"
+	"path/filepath"
 	"sin/internal/utils"
 	"strings"
 	"time"
@@ -29,6 +29,7 @@ const (
 )
 
 var _ Adapter = (*s3Adapter)(nil)
+var _ Downloader = (*s3Adapter)(nil)
 
 // s3Adapter is not safe for concurrent use.
 type s3Adapter struct {
@@ -91,16 +92,16 @@ func (f *s3Adapter) Save(ctx context.Context, source string, pathElem string, pa
 	p := f.joinPath(pathElem, pathElems...)
 	checksum, err := utils.FileSHA256Checksum(source)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error calculating checksum file %s", source)
 	}
 	file, err := os.Open(source)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error opening file %s", source)
 	}
 	defer file.Close()
 	fi, err := file.Stat()
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error getting file info %s", source)
 	}
 	if fi.Size() < int64(f.Multipart.ThresholdMB*MB) {
 		return f.upload(ctx, p, file, checksum)
@@ -136,14 +137,14 @@ func (f *s3Adapter) uploadMultipart(ctx context.Context, p string, file *os.File
 		if errors.As(err, &apiErr) && apiErr.ErrorCode() == "EntityTooLarge" {
 			return errors.New("object too large")
 		}
-		return err
+		return errors.Wrapf(err, "error uploading %s", p)
 	}
 
 	err = s3.NewObjectExistsWaiter(s3Client).Wait(ctx,
 		&s3.HeadObjectInput{Bucket: aws.String(f.Bucket), Key: aws.String(p)},
 		5*time.Minute)
 	if err != nil {
-		return fmt.Errorf("error waiting for object %s: %w", p, err)
+		return errors.Wrapf(err, "error waiting for object %s", p)
 	}
 	return f.uploadChecksum(ctx, p, hex.EncodeToString(checksum))
 }
@@ -165,13 +166,13 @@ func (f *s3Adapter) upload(ctx context.Context, p string, file *os.File, checksu
 		})
 	}, try.WithFixedBackoff(10*time.Second))
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error uploading %s", p)
 	}
 	err = s3.NewObjectExistsWaiter(s3Client).Wait(ctx,
 		&s3.HeadObjectInput{Bucket: aws.String(f.Bucket), Key: aws.String(p)},
 		5*time.Minute)
 	if err != nil {
-		return fmt.Errorf("error waiting for object %s: %w", p, err)
+		return errors.Wrapf(err, "error waiting for object %s", p)
 	}
 	return f.uploadChecksum(ctx, p, hex.EncodeToString(checksum))
 }
@@ -190,13 +191,13 @@ func (f *s3Adapter) uploadChecksum(ctx context.Context, p string, checksum strin
 		})
 	}, try.WithFixedBackoff(10*time.Second))
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error uploadingchecksum %s", p)
 	}
 	err = s3.NewObjectExistsWaiter(s3Client).Wait(ctx,
 		&s3.HeadObjectInput{Bucket: aws.String(f.Bucket), Key: aws.String(p)},
 		5*time.Minute)
 	if err != nil {
-		return fmt.Errorf("error waiting for object checksum %s: %w", p, err)
+		return errors.Wrapf(err, "error waiting for checksum %s", p)
 	}
 	return nil
 }
@@ -270,6 +271,107 @@ func (f *s3Adapter) ListFileNames(ctx context.Context, pathElems ...string) ([]s
 	return filenames, nil
 }
 
+func (f *s3Adapter) Download(ctx context.Context, destination string, sourcePaths ...string) error {
+	s3Client, err := f.getClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(sourcePaths) == 0 {
+		sourcePaths = []string{filepath.Base(destination)}
+	}
+	source := f.joinPath("", sourcePaths...)
+	res, err := s3Client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(f.Bucket),
+		Key:    aws.String(source),
+	})
+	if err != nil {
+		return errors.Wrapf(err, "error head file %s", source)
+	}
+	if res.ContentLength == nil {
+		return errors.New("cannot determine file size")
+	}
+
+	if err := f.downloadChecksum(ctx, s3Client, destination, source); err != nil {
+		return err
+	}
+
+	if *res.ContentLength < int64(f.Multipart.ThresholdMB*MB) {
+		err = f.download(ctx, s3Client, destination, source)
+	} else {
+		err = f.downloadMultipart(ctx, s3Client, destination, source)
+	}
+	if err != nil {
+		return err
+	}
+	return utils.VerifyFileSHA256Checksum(destination)
+}
+
+func (f *s3Adapter) download(ctx context.Context, s3Client *s3.Client, destination string, source string) error {
+	result, err := try.GetCtx(ctx, func() (*s3.GetObjectOutput, error) {
+		return s3Client.GetObject(ctx, &s3.GetObjectInput{
+			Bucket: aws.String(f.Bucket),
+			Key:    aws.String(source),
+		})
+	}, try.WithFixedBackoff(10*time.Second))
+	if err != nil {
+		var noKey *types.NoSuchKey
+		if errors.As(err, &noKey) {
+			return ErrFileNotFound
+		}
+		return errors.Wrapf(err, "error downloading file %s", source)
+	}
+	defer result.Body.Close()
+	if err := utils.CopyToFile(ctx, result.Body, destination); err != nil {
+		return errors.Wrapf(err, "error writing file %s", destination)
+	}
+	return nil
+}
+
+func (f *s3Adapter) downloadMultipart(ctx context.Context, s3Client *s3.Client, destination string, source string) (err error) {
+	downloader := manager.NewDownloader(s3Client, func(u *manager.Downloader) {
+		u.PartSize = int64(min(f.Multipart.PartSizeMB, 10) * MB)
+		u.Concurrency = f.Multipart.Concurrency
+	})
+
+	out, err := os.Create(destination)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		cerr := out.Close()
+		if err == nil {
+			err = cerr
+		}
+	}()
+
+	// TODO: should we retry this?
+	_, err = downloader.Download(ctx, out, &s3.GetObjectInput{
+		Bucket: aws.String(f.Bucket),
+		Key:    aws.String(source),
+	})
+
+	if err != nil {
+		var noKey *types.NoSuchKey
+		if errors.As(err, &noKey) {
+			return ErrFileNotFound
+		}
+		return errors.Wrapf(err, "error downloading file %s", source)
+	}
+
+	return out.Sync()
+}
+
+func (f *s3Adapter) downloadChecksum(ctx context.Context, s3Client *s3.Client, destination string, source string) error {
+	destination = destination + utils.ChecksumExt
+	source = source + utils.ChecksumExt
+	err := f.download(ctx, s3Client, destination, source)
+	if errors.Is(err, ErrFileNotFound) {
+		return nil
+	}
+	return errors.Wrapf(err, "error downloading checksum file %s", source)
+}
+
 func (f *s3Adapter) Config() AdapterConfig {
 	return f.AdapterConfig
 }
@@ -288,10 +390,12 @@ func (f *s3Adapter) getClient(ctx context.Context) (*s3.Client, error) {
 		)
 	}, try.WithFixedBackoff(10*time.Second))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error loading aws config")
 	}
 
-	f.client = s3.NewFromConfig(cfg)
+	f.client = s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.DisableLogOutputChecksumValidationSkipped = true
+	})
 	return f.client, nil
 }
 

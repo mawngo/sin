@@ -32,8 +32,7 @@ type Adapter interface {
 }
 
 var (
-	ErrChecksumMismatch = errors.New("checksum mismatch")
-	ErrNotExist         = errors.New("file does not exist")
+	ErrFileNotFound = errors.New("file not found")
 )
 
 // Downloader Adapter that can download a file.

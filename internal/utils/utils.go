@@ -2,7 +2,6 @@ package utils
 
 import (
 	"crypto/sha256"
-	"fmt"
 	"github.com/mitchellh/mapstructure"
 	"io"
 	"os"
@@ -36,7 +35,7 @@ func FileSHA256Checksum(path string) ([]byte, error) {
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
-		return nil, fmt.Errorf("error computing checksum for %s: %w", path, err)
+		return nil, err
 	}
 	return h.Sum(nil), nil
 }

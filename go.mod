@@ -12,6 +12,7 @@ require (
 	github.com/flc1125/go-cron/v4 v4.5.1
 	github.com/getsentry/sentry-go v0.31.1
 	github.com/go-viper/mapstructure/v2 v2.2.1
+	github.com/mawngo/go-errors v1.1.0
 	github.com/mawngo/go-try/v2 v2.0.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pterm/pterm v0.12.80

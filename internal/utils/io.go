@@ -14,7 +14,12 @@ import (
 	"slices"
 )
 
-const ChecksumExt = ".sha256.txt"
+const (
+	ChecksumExt    = ".sha256.txt"
+	BadChecksumExt = ".sha256.bad"
+)
+
+var ErrChecksumMismatch = errors.New("checksum mismatch")
 
 type readerFunc func(p []byte) (n int, err error)
 
@@ -26,6 +31,10 @@ func CopyFile(ctx context.Context, src string, dst string) (err error) {
 		return err
 	}
 	defer in.Close()
+	return CopyToFile(ctx, in, dst)
+}
+
+func CopyToFile(ctx context.Context, in io.Reader, dst string) (err error) {
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
@@ -112,6 +121,17 @@ func DelFile(path string) error {
 	return os.Remove(checksum)
 }
 
+func FileExists(path string) (bool, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+	return !info.IsDir(), nil
+}
+
 func CreateFileSHA256Checksum(path string, dest ...string) error {
 	// Write the checksum file first.
 	checksum, err := FileSHA256Checksum(path)
@@ -123,14 +143,65 @@ func CreateFileSHA256Checksum(path string, dest ...string) error {
 		destChecksum = dest[0]
 	}
 
-	err = (func() error {
+	err = (func() (err error) {
 		fi, err := os.Create(destChecksum)
 		if err != nil {
 			return err
 		}
-		defer fi.Close()
+		defer func() {
+			cerr := fi.Close()
+			if err == nil {
+				err = cerr
+			}
+		}()
 		_, err = fi.WriteString(hex.EncodeToString(checksum))
 		return err
 	})()
 	return err
+}
+
+// VerifyFileSHA256Checksum verify the check sum specified in ChecksumExt file.
+// If the checksum file is not found or is empty, then the verification is skipped.
+// If the checksum is mismatched, then it generates a BadChecksumExt file contains current checksum.
+func VerifyFileSHA256Checksum(path string) error {
+	destChecksum := path + ChecksumExt
+	exists, err := FileExists(destChecksum)
+	if !exists {
+		return err
+	}
+
+	b, err := os.ReadFile(destChecksum)
+	if err != nil {
+		return err
+	}
+	checksum := string(b)
+	if checksum == "" {
+		return nil
+	}
+
+	fileChecksum, err := FileSHA256Checksum(path)
+	if err != nil {
+		return err
+	}
+	fileChecksumHex := hex.EncodeToString(fileChecksum)
+	if checksum == fileChecksumHex {
+		return nil
+	}
+
+	// Write current checksum to the bad checksum file.
+	err = (func() (err error) {
+		fi, err := os.Create(destChecksum)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			cerr := fi.Close()
+			if err == nil {
+				err = cerr
+			}
+		}()
+		_, err = fi.WriteString(fileChecksumHex)
+		return err
+	})()
+	return errors.Join(ErrChecksumMismatch, err)
 }
