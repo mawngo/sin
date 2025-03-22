@@ -163,3 +163,31 @@ Backup using pg_dump:
 ```shell
 sin pg postgresql://localhost:5432 --config config.json --name testbackup_pg --gzip
 ```
+
+Use `--help` for more details.
+
+```
+> sin --help
+Backup tools
+
+Usage:
+  sin [command]
+
+Available Commands:
+  list        List remote backup files
+  pull        Pull remote backup to local
+  file        Run backup for file/directory
+  mongo       Run backup for mongo using mongodump
+  pg          Run backup for postgres using pg_dump
+  help        Help about any command
+  completion  Generate the autocompletion script for the specified shell
+
+Flags:
+  -c, --config string   specify config file
+      --env             (experimental) enable automatic environment binding
+      --ff              enable fail-fast mode
+  -h, --help            help for sin
+      --name string     name of output backup and log file (default "backup")
+
+Use "sin [command] --help" for more information about a command.
+```

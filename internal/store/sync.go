@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/pterm/pterm"
+	"github.com/samber/lo"
 	"log/slog"
 	"path/filepath"
 	"sin/internal/core"
 	"sin/internal/utils"
+	"slices"
 	"strings"
 	"time"
 )
@@ -161,6 +163,41 @@ func (s *Syncer) Sync(ctx context.Context, source string, start time.Time) error
 		return errors.Join(errs...)
 	}
 	return nil
+}
+
+func (s *Syncer) List(ctx context.Context, filename string, adapterTypes ...string) error {
+	if len(s.adapters) == 0 {
+		return errors.New("empty list of targets")
+	}
+	filename = strings.TrimSuffix(filename, core.BackupFileExt)
+
+	errs := make([]error, 0, len(s.adapters))
+	for _, adapter := range s.adapters {
+		if len(adapterTypes) > 0 && !slices.Contains(adapterTypes, adapter.Type()) {
+			continue
+		}
+
+		conf := adapter.Config()
+		names, err := adapter.ListFileNames(ctx)
+		total := len(names)
+		names = utils.FilterBackupFileNames(names, filename)
+		backups := len(names)
+		pterm.Info.Println("Files in", conf.Name, pterm.Sprintf("(%d/%d)", backups, total))
+		if err != nil {
+			pterm.Warning.Println("Error listing", conf.Name, err)
+			errs = append(errs, fmt.Errorf("error listing %s: %w", conf.Name, err))
+			if s.failFast {
+				return errors.Join(errs...)
+			}
+			continue
+		}
+		items := lo.Map(names, func(item string, _ int) pterm.BulletListItem {
+			return pterm.BulletListItem{Level: 0, Text: item}
+		})
+		errs = append(errs, pterm.DefaultBulletList.WithItems(items).Render())
+	}
+	pterm.Println("Completed.")
+	return errors.Join(errs...)
 }
 
 // compact deletes old backup to keep the total number of backup bellows Keep config.

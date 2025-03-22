@@ -14,6 +14,7 @@ type CLI struct {
 
 // NewCLI create new CLI instance and setup application core.
 func NewCLI(app *core.App) *CLI {
+	cobra.EnableCommandSorting = false
 	flags := core.AppInitConfig{
 		Name: "backup",
 	}
@@ -36,10 +37,12 @@ func NewCLI(app *core.App) *CLI {
 	command.PersistentFlags().BoolVar(&flags.FailFast, "ff", flags.FailFast, "enable fail-fast mode")
 	command.PersistentFlags().BoolVar(&flags.AutomaticEnv, "env", flags.AutomaticEnv, "(experimental) enable automatic environment binding")
 
-	command.AddCommand(NewMongoCmd(app))
-	command.AddCommand(NewFileCmd(app))
-	command.AddCommand(NewPGCmd(app))
+	command.AddCommand(NewListCmd(app))
 	command.AddCommand(NewPullCmd(app))
+
+	command.AddCommand(NewFileCmd(app))
+	command.AddCommand(NewMongoCmd(app))
+	command.AddCommand(NewPGCmd(app))
 	return &CLI{
 		command: &command,
 	}
