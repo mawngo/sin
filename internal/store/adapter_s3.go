@@ -45,6 +45,10 @@ type s3Adapter struct {
 	recentlyDeleted map[string]struct{}
 }
 
+func (f *s3Adapter) Type() string {
+	return AdapterS3Type
+}
+
 type s3MultipartConfig struct {
 	ThresholdMB     int  `json:"thresholdMB"`
 	PartSizeMB      int  `json:"partSizeMB"`
@@ -56,6 +60,9 @@ func newS3Adapter(conf map[string]any) (Adapter, error) {
 	adapter := s3Adapter{}
 	if err := utils.MapToStruct(conf, &adapter); err != nil {
 		return nil, err
+	}
+	if adapter.Name == "" {
+		adapter.Name = adapter.Type()
 	}
 	if adapter.Bucket == "" {
 		return nil, errors.New("missing bucket config for s3 adapter " + adapter.Name)

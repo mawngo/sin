@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Syncer sync local backup to remote.
+// Syncer sync local backup to remote, or pull backup from remote to local.
 // Syncer instance is not thread safe.
 type Syncer struct {
 	adapters []Adapter
@@ -25,6 +25,9 @@ type Syncer struct {
 
 	// keep the last N backups.
 	keep int
+
+	// pullTargetDir the directory to pull backup to.
+	pullTargetDir string
 }
 
 func NewSyncer(app *core.App) (*Syncer, error) {
@@ -56,16 +59,22 @@ func NewSyncer(app *core.App) (*Syncer, error) {
 		t := target["type"].(string)
 		name := target["name"].(string)
 		switch t {
-		case "file":
+		case AdapterFileType:
 			adapter, err := newFileAdapter(target)
 			if err != nil {
 				return nil, fmt.Errorf("error creating file adapter %s: %w", name, err)
 			}
 			s.adapters = append(s.adapters, adapter)
-		case "s3":
+		case AdapterS3Type:
 			adapter, err := newS3Adapter(target)
 			if err != nil {
 				return nil, fmt.Errorf("error creating s3 adapter %s: %w", name, err)
+			}
+			s.adapters = append(s.adapters, adapter)
+		case AdapterMockType:
+			adapter, err := newMockAdapter(target)
+			if err != nil {
+				return nil, fmt.Errorf("error creating mock adapter %s: %w", name, err)
 			}
 			s.adapters = append(s.adapters, adapter)
 		default:
@@ -195,37 +204,4 @@ func (s *Syncer) compact(ctx context.Context, adapter Adapter, filename string) 
 		}
 	}
 	return nil
-}
-
-// Adapter abstract storage adapter.
-type Adapter interface {
-	// Save saves a file to the storage, override if the file already exists.
-	// If extra pathElems are given, pathElems will be joined.
-	Save(ctx context.Context, source string, pathElem string, pathElems ...string) error
-
-	// Del removes a file from the storage.
-	// If extra pathElems are given, pathElems will be joined.
-	// Do nothing if the file is directory.
-	Del(ctx context.Context, pathElem string, pathElems ...string) error
-
-	// ListFileNames return list of file names in the given path.
-	// Return empty if not a directory, pathElems will be joined.
-	ListFileNames(ctx context.Context, pathElems ...string) ([]string, error)
-
-	Config() AdapterConfig
-}
-
-type AdapterConfig struct {
-	Name string `json:"name"`
-
-	// Disabled whether this adapter should be skipped.
-	Disabled bool `json:"disabled"`
-
-	// Keep override the Syncer Keep. Default 0 (using the Syncer Keep).
-	Keep int `json:"keep"`
-
-	// Each controls the number of actual syncs.
-	// Default it will sync every backup.
-	// If set to number n > 1, it will sync every nth backup.
-	Each int `json:"each"`
 }

@@ -114,6 +114,17 @@ file using `--config` options.
             // S3 Access Secret.
             "accessSecret": "???"
         },
+        {
+            "name": "dryrun_example",
+            // ...
+            // Mock specific config, this target is for testing only.
+            "type": "mock",
+            // Optional, directory to write log to.
+            "dir": ".",
+            // Optional, log file name.
+            // Instead of sync, "mock" will write a list of files to a file named by this field, or <name>.remote.log if not specified.
+            "logFile": "mock.log"
+        },
     ]
 }
 ```

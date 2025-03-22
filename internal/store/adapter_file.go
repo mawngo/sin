@@ -17,10 +17,17 @@ type fileAdapter struct {
 	Dir string `json:"dir"`
 }
 
+func (f *fileAdapter) Type() string {
+	return AdapterFileType
+}
+
 func newFileAdapter(conf map[string]any) (Adapter, error) {
 	adapter := fileAdapter{}
 	if err := utils.MapToStruct(conf, &adapter); err != nil {
 		return nil, err
+	}
+	if adapter.Name == "" {
+		adapter.Name = adapter.Type()
 	}
 	if adapter.Dir == "" {
 		return nil, errors.New("missing dir config for file adapter " + adapter.Name)
