@@ -49,10 +49,9 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 
 			destFileName := app.Name
 			if enableGzip {
-				destFileName += ".gz" + core.BackupFileExt
-			} else {
-				destFileName += core.BackupFileExt
+				destFileName += ".gz"
 			}
+			destFileName += core.BackupFileExt
 
 			dest := filepath.Join(app.Config.BackupTempDir, destFileName)
 			dumpArgs := []string{

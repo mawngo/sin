@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sin/internal/utils"
@@ -42,9 +43,11 @@ func (f *fileAdapter) Save(ctx context.Context, source string, pathElem string, 
 	}
 
 	destChecksum := dest + utils.ChecksumExt
-	err := utils.CreateFileSHA256Checksum(source, destChecksum)
+	if err := utils.CreateFileSHA256Checksum(source, destChecksum); err != nil {
+		return fmt.Errorf("error creating checksum file %s: %w", destChecksum, err)
+	}
 
-	err = utils.CopyFile(ctx, source, dest)
+	err := utils.CopyFile(ctx, source, dest)
 	if err != nil {
 		_ = os.Remove(dest)
 		_ = os.Remove(destChecksum)

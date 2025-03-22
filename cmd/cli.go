@@ -20,7 +20,7 @@ func NewCLI(app *core.App) *CLI {
 	command := cobra.Command{
 		Use:   "sin",
 		Short: "Backup tools",
-		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			err := app.Init(flags)
 			if err != nil {
 				pterm.Error.Printf("Error initializing: %s\n", err)

@@ -41,8 +41,7 @@ type s3Adapter struct {
 	Region       string            `json:"region"`
 	BasePath     string            `json:"basePath"`
 
-	client          *s3.Client
-	recentlyDeleted map[string]struct{}
+	client *s3.Client
 }
 
 func (f *s3Adapter) Type() string {
@@ -262,7 +261,7 @@ func (f *s3Adapter) ListFileNames(ctx context.Context, pathElems ...string) ([]s
 				key = strings.TrimPrefix(key, p+"/")
 			}
 			// Skip nested directories.
-			if strings.Index(key, "/") > -1 {
+			if strings.Contains(key, "/") {
 				continue
 			}
 			filenames = append(filenames, key)
