@@ -26,6 +26,7 @@ type AppInitConfig struct {
 	Name         string
 	AutomaticEnv bool
 	FailFast     bool
+	Keep         int
 }
 
 type App struct {
@@ -62,8 +63,6 @@ type Config struct {
 // Init setup application core.
 func (app *App) Init(c AppInitConfig) error {
 	app.Config = Config{
-		Name:          c.Name,
-		FailFast:      c.FailFast,
 		Keep:          -1,
 		BackupTempDir: ".",
 	}
@@ -72,6 +71,19 @@ func (app *App) Init(c AppInitConfig) error {
 	if err := loadJSONConfigInto(&app.Config, c.ConfigFile, c.AutomaticEnv); err != nil {
 		return err
 	}
+	if c.Name != "" {
+		app.Name = c.Name
+	}
+	if app.Name == "" {
+		app.Name = DefaultAppName
+	}
+	if c.FailFast {
+		app.FailFast = c.FailFast
+	}
+	if c.Keep > 0 {
+		app.Keep = c.Keep
+	}
+
 	if err := setupLogging(app); err != nil {
 		return err
 	}

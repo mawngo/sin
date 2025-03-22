@@ -45,10 +45,12 @@ file using `--config` options.
 {
     // Name of the backup process, this affects the output backup filename.
     // Optional, and can also be specified using `--name` option.
+    // Can be overridden using `--name` option.
     "name": "backup_file",
     // Optional, Sentry DSN for error reporting.
     "sentryDSN": "https://<key>@sentry.io/<project-id>",
     // Optional, enable fail-fast mode, stop on sync error.
+    // Can be overridden using `--ff` option.
     "failFast": false,
     // Optional, local backup directory, default to current directory.
     "backupTempDir": ".",
@@ -60,6 +62,7 @@ file using `--config` options.
     // Default number of recent backups to keep.
     // Only apply for targets, local backup is always kept 0-1.
     // If not specified, or set to < 1, then keep unlimited.
+    // Can be overridden using `--keep` option.
     "keep": 7,
     // Backup targets.
     "targets": [
@@ -184,10 +187,11 @@ Available Commands:
 
 Flags:
   -c, --config string   specify config file
-      --env             (experimental) enable automatic environment binding
+      --name string     name of output backup and log file
       --ff              enable fail-fast mode
+      --keep int        number of backups to keep
+      --env             (experimental) enable automatic environment binding
   -h, --help            help for sin
-      --name string     name of output backup and log file (default "backup")
 
 Use "sin [command] --help" for more information about a command.
 ```
