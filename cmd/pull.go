@@ -11,7 +11,7 @@ import (
 
 func NewPullCmd(app *core.App) *cobra.Command {
 	command := cobra.Command{
-		Use:   "pull <adapter...?>",
+		Use:   "pull <target names...?>",
 		Args:  cobra.MinimumNArgs(0),
 		Short: "Pull remote backup to local",
 		Run: func(cmd *cobra.Command, args []string) {

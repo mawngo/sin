@@ -165,7 +165,7 @@ func (s *Syncer) Sync(ctx context.Context, source string, start time.Time) error
 	return nil
 }
 
-func (s *Syncer) List(ctx context.Context, filename string, adapterTypes ...string) error {
+func (s *Syncer) List(ctx context.Context, filename string, adapterNames ...string) error {
 	if len(s.adapters) == 0 {
 		return errors.New("empty list of targets")
 	}
@@ -173,7 +173,7 @@ func (s *Syncer) List(ctx context.Context, filename string, adapterTypes ...stri
 
 	errs := make([]error, 0, len(s.adapters))
 	for _, adapter := range s.adapters {
-		if len(adapterTypes) > 0 && !slices.Contains(adapterTypes, adapter.Type()) {
+		if len(adapterNames) > 0 && !slices.Contains(adapterNames, adapter.Config().Name) {
 			continue
 		}
 

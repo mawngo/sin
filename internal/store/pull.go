@@ -15,12 +15,12 @@ import (
 	"time"
 )
 
-func (s *Syncer) Pull(ctx context.Context, filename string, adapterTypes ...string) error {
+func (s *Syncer) Pull(ctx context.Context, filename string, adapterNames ...string) error {
 	filename = strings.TrimSuffix(filename, core.BackupFileExt)
 	pterm.Println("Pulling to", s.pullTargetDir)
 
 	downloaders := lo.FilterMap(s.adapters, func(adapter Adapter, _ int) (Downloader, bool) {
-		if len(adapterTypes) > 0 && !slices.Contains(adapterTypes, adapter.Type()) {
+		if len(adapterNames) > 0 && !slices.Contains(adapterNames, adapter.Config().Name) {
 			return nil, false
 		}
 		d, ok := adapter.(Downloader)

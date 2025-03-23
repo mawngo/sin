@@ -10,7 +10,7 @@ import (
 
 func NewListCmd(app *core.App) *cobra.Command {
 	command := cobra.Command{
-		Use:   "list <adapter...?>",
+		Use:   "list <target names...?>",
 		Args:  cobra.MinimumNArgs(0),
 		Short: "List remote backup files",
 		Run: func(cmd *cobra.Command, args []string) {
