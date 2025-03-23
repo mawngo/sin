@@ -26,7 +26,11 @@ func NewPullCmd(app *core.App) *cobra.Command {
 
 			extension := lo.Must(cmd.Flags().GetString("ext"))
 			destFileName := app.Name
-			if extension != "" {
+			if extension == "*" {
+				destFileName += "(.\\w+)?"
+			} else if extension == "+" {
+				destFileName += ".\\w+"
+			} else if extension != "" {
 				destFileName += "." + extension
 			}
 			destFileName += core.BackupFileExt
@@ -41,6 +45,6 @@ func NewPullCmd(app *core.App) *cobra.Command {
 			}
 		},
 	}
-	command.Flags().StringP("ext", "e", "", "specify the extension of target file (without dot)")
+	command.Flags().StringP("ext", "e", "*", "specify the extension of target file (without dot)")
 	return &command
 }
