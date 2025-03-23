@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"sin/internal/core"
 	"slices"
+	"strings"
 )
 
 const (
@@ -91,7 +92,7 @@ func FilterBackupFileNames(names []string, filename string) []string {
 	if len(names) == 0 {
 		return names
 	}
-	reg, err := regexp.Compile(fmt.Sprintf(`\d{6}_\d{4}_%s%s$`, filename, core.BackupFileExt))
+	reg, err := regexp.Compile(fmt.Sprintf(`\d{6}_\d{4}_%s%s%s$`, strings.ReplaceAll(filename, ".", "\\."), "\\", core.BackupFileExt))
 	if err != nil {
 		slog.Error("error compiling regexp", slog.String("filename", filename), slog.Any("err", err))
 		panic(fmt.Errorf("error compiling regexp: %w", err))
