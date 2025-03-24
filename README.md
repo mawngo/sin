@@ -147,6 +147,54 @@ will be reported, and it will continue running.
 
 To exit on synchronization error, set `failFast` to true in the config file, or use `--ff` options.
 
+### Pulling backups to local
+
+Use `pull` command to download backup files to local machine.
+
+```shell
+sin pull --config sync_file.json --name mybackup
+```
+
+Config file must be specified and must contain at least one enabled target.
+`pull` command using the same config file format as other backup commands:
+
+```json5
+{
+    // Name of the backup file to download.
+    "name": "backup_file",
+    // Optional, Sentry DSN for error reporting.
+    "sentryDSN": "https://<key>@sentry.io/<project-id>",
+    // Optional, enable fail-fast mode, stop on sync error.
+    // Can be overridden using `--ff` option.
+    "failFast": false,
+    // Optional, directory to download backup to, default to current directory.
+    "backupTempDir": ".",
+    // Frequency of pull.
+    // Accept crontab or duration. Run once if not specified. 
+    "frequency": "*/2 * * * *",
+    // Default number of recent backups to keep on local.
+    // If not specified, or set to < 1, then keep unlimited.
+    // Can be overridden using `--keep` option.
+    "keep": 7,
+    // Backup sources.
+    "targets": [
+        {
+            // Name of the target, always required.
+            "name": "backup1",
+            // Optional, disable this target.
+            "disabled": false,
+            // Target specific config....
+        },
+    ]
+}
+```
+
+To see the list of available backups on remote target, use `list` command:
+
+```shell
+sin list --config sync_file.json --name mybackup
+```
+
 ## Examples
 
 Backup file/directory:
