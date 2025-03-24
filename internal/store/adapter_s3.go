@@ -363,8 +363,8 @@ func (f *s3Adapter) downloadMultipart(ctx context.Context, s3Client *s3.Client, 
 }
 
 func (f *s3Adapter) downloadChecksum(ctx context.Context, s3Client *s3.Client, destination string, source string) error {
-	destination = destination + utils.ChecksumExt
-	source = source + utils.ChecksumExt
+	destination += utils.ChecksumExt
+	source += utils.ChecksumExt
 	err := f.download(ctx, s3Client, destination, source)
 	if errors.Is(err, ErrFileNotFound) {
 		return nil
