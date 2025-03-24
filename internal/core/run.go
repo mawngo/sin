@@ -6,6 +6,7 @@ import (
 	"github.com/mawngo/go-errors"
 	"github.com/pterm/pterm"
 	"log/slog"
+	"strings"
 	"time"
 )
 
@@ -48,6 +49,12 @@ func runInterval(ctx context.Context, dur time.Duration, fn func() error) error 
 }
 
 func runCron(ctx context.Context, freq string, fn func() error) error {
+	immediate := false
+	if strings.HasSuffix(freq, "!") {
+		immediate = true
+		freq = strings.TrimSuffix(freq, "!")
+	}
+
 	c := cron.New(
 		cron.WithContext(ctx),
 		cron.WithLogger(cron.DiscardLogger),
@@ -66,8 +73,14 @@ func runCron(ctx context.Context, freq string, fn func() error) error {
 	if err != nil {
 		return errors.Wrapf(err, "invalid cron expression [%s]", freq)
 	}
-
 	c.Start()
+	if immediate {
+		select {
+		case jobs <- struct{}{}:
+		case <-ctx.Done():
+		default:
+		}
+	}
 	for {
 		startWait := time.Now()
 		select {
