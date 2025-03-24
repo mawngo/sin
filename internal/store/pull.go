@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"fmt"
 	"github.com/mawngo/go-errors"
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
@@ -178,7 +177,7 @@ func (s *Syncer) compactLocal(filename string) error {
 	}
 	names, err := utils.ListFileNames(s.pullTargetDir)
 	if err != nil {
-		return fmt.Errorf("error listing file names on local %s: %w", s.pullTargetDir, err)
+		return errors.Wrapf(err, "error listing file names on local %s", s.pullTargetDir)
 	}
 	names = utils.FilterBackupFileNames(names, filename)
 	if len(names) <= s.keep {
@@ -196,7 +195,7 @@ func (s *Syncer) compactLocal(filename string) error {
 			slog.String("target", name),
 		)
 		if err := utils.DelFile(name); err != nil {
-			return fmt.Errorf("error deleting old backup: %w", err)
+			return errors.Wrapf(err, "error deleting old backup")
 		}
 	}
 	return nil

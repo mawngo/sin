@@ -2,8 +2,8 @@ package core
 
 import (
 	"context"
-	"fmt"
 	"github.com/flc1125/go-cron/v4"
+	"github.com/mawngo/go-errors"
 	"github.com/pterm/pterm"
 	"log/slog"
 	"time"
@@ -64,7 +64,7 @@ func runCron(ctx context.Context, freq string, fn func() error) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("invalid cron expression [%s]: %w", freq, err)
+		return errors.Wrapf(err, "invalid cron expression [%s]", freq)
 	}
 
 	c.Start()

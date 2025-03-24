@@ -2,8 +2,7 @@ package cmd
 
 import (
 	"compress/gzip"
-	"errors"
-	"fmt"
+	"github.com/mawngo/go-errors"
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
@@ -58,7 +57,7 @@ func NewPGCmd(app *core.App) *cobra.Command {
 				pterm.Debug.Println("Truncating old local backup")
 				f, err := os.Create(dest)
 				if err != nil {
-					return fmt.Errorf("error creating backup file %s: %w", dest, err)
+					return errors.Wrapf(err, "error creating backup file %s", dest)
 				}
 
 				command := exec.CommandContext(app.Ctx, pgdump, dumpArgs...)
@@ -66,7 +65,7 @@ func NewPGCmd(app *core.App) *cobra.Command {
 				var w io.Writer = f
 				out, err := command.StdoutPipe()
 				if err != nil {
-					return fmt.Errorf("error creating stdout pipe: %w", err)
+					return errors.Wrapf(err, "error creating stdout pipe")
 				}
 
 				start := time.Now()
@@ -78,13 +77,13 @@ func NewPGCmd(app *core.App) *cobra.Command {
 						w = gzip.NewWriter(f)
 					}
 					if err := command.Start(); err != nil {
-						return fmt.Errorf("error running command: %w", err)
+						return errors.Wrapf(err, "error running command")
 					}
 					if _, err := io.Copy(w, out); err != nil {
-						return fmt.Errorf("error piping pg_dump output to file %s: %w", dest, err)
+						return errors.Wrapf(err, "error piping pg_dump output to file %s", dest)
 					}
 					if err := command.Wait(); err != nil {
-						return fmt.Errorf("error running pg_dump: %w", err)
+						return errors.Wrapf(err, "error running pg_dump")
 					}
 					return nil
 				})()

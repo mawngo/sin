@@ -121,7 +121,7 @@ func (app *App) Init(c AppInitConfig) error {
 	}
 	f, err := os.Create(nameLockPath)
 	if err != nil {
-		err := fmt.Errorf("cannot create lock file: %w", err)
+		err := errors.Wrapf(err, "cannot create lock file")
 		slog.Error("Error initializing", slog.Any("err", err))
 		return err
 	}
@@ -151,7 +151,7 @@ func (app *App) Close() error {
 			pterm.Error.Println("Error removing lock file", app.nameLockPath, err)
 			slog.Error("Error shutdown",
 				slog.String("path", app.nameLockPath),
-				slog.Any("err", fmt.Errorf("cannot remove lock file %w", err)),
+				slog.Any("err", errors.Wrapf(err, "cannot remove lock file")),
 			)
 		}
 	}
@@ -173,7 +173,7 @@ func (app *App) MustClose() {
 func setupLogging(app *App) error {
 	f, err := os.OpenFile(fmt.Sprintf("%s%s", app.Name, LogFileExt), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		return fmt.Errorf("error opening log file: %w", err)
+		return errors.Wrapf(err, "error opening log file")
 	}
 
 	handler := slog.NewJSONHandler(f, &slog.HandlerOptions{Level: slog.LevelInfo})
@@ -189,7 +189,7 @@ func setupLogging(app *App) error {
 		EnableTracing: false,
 	})
 	if err != nil {
-		return fmt.Errorf("error initializing sentry: %w", err)
+		return errors.Wrapf(err, "error initializing sentry")
 	}
 
 	slog.SetDefault(slog.New(

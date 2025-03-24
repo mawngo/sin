@@ -3,8 +3,8 @@ package utils
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
+	"github.com/mawngo/go-errors"
 	"github.com/samber/lo"
 	"io"
 	"log/slog"
@@ -94,8 +94,9 @@ func FilterBackupFileNames(names []string, filename string) []string {
 	}
 	reg, err := regexp.Compile(fmt.Sprintf(`\d{6}_\d{4}_%s%s%s$`, strings.ReplaceAll(filename, ".", "\\."), "\\", core.BackupFileExt))
 	if err != nil {
+		err = errors.Wrapf(err, "error compiling regexp for filename")
 		slog.Error("error compiling regexp", slog.String("filename", filename), slog.Any("err", err))
-		panic(fmt.Errorf("error compiling regexp: %w", err))
+		panic(err)
 	}
 	names = lo.Filter(names, func(name string, _ int) bool {
 		return reg.MatchString(name)

@@ -2,8 +2,7 @@ package store
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"github.com/mawngo/go-errors"
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"log/slog"
@@ -64,19 +63,19 @@ func NewSyncer(app *core.App) (*Syncer, error) {
 		case AdapterFileType:
 			adapter, err := newFileAdapter(target)
 			if err != nil {
-				return nil, fmt.Errorf("error creating file adapter %s: %w", name, err)
+				return nil, errors.Wrapf(err, "error creating file adapter %s", name)
 			}
 			s.adapters = append(s.adapters, adapter)
 		case AdapterS3Type:
 			adapter, err := newS3Adapter(target)
 			if err != nil {
-				return nil, fmt.Errorf("error creating s3 adapter %s: %w", name, err)
+				return nil, errors.Wrapf(err, "error creating s3 adapter %s", name)
 			}
 			s.adapters = append(s.adapters, adapter)
 		case AdapterMockType:
 			adapter, err := newMockAdapter(target)
 			if err != nil {
-				return nil, fmt.Errorf("error creating mock adapter %s: %w", name, err)
+				return nil, errors.Wrapf(err, "error creating mock adapter %s", name)
 			}
 			s.adapters = append(s.adapters, adapter)
 		default:
@@ -125,7 +124,7 @@ func (s *Syncer) Sync(ctx context.Context, source string, start time.Time) error
 				slog.String("adapter", conf.Name),
 				slog.String("filename", filename),
 				slog.Any("err", err))
-			errs = append(errs, fmt.Errorf("error syncing %s: %w", conf.Name, err))
+			errs = append(errs, errors.Wrapf(err, "error syncing %s", conf.Name))
 			continue
 		}
 		pterm.Success.Println("Synced to", conf.Name, "took", time.Since(start).String())
@@ -149,7 +148,7 @@ func (s *Syncer) Sync(ctx context.Context, source string, start time.Time) error
 	s.iter++
 	for _, adapter := range successes {
 		if err := s.compact(ctx, adapter, filename); err != nil {
-			errs = append(errs, fmt.Errorf("error compacting %s: %w", adapter.Config().Name, err))
+			errs = append(errs, errors.Wrapf(err, "error compacting %s", adapter.Config().Name))
 			// Currently we ignore compact error as it is not critical, and compact can be run again next sync.
 			// But if the error happens continuously, it could be a problem.
 			pterm.Warning.Printf("Error compacting %s: %s\n", adapter.Config().Name, err)
@@ -185,7 +184,7 @@ func (s *Syncer) List(ctx context.Context, filename string, adapterNames ...stri
 		pterm.Info.Println("Files in", conf.Name, pterm.Sprintf("(%d/%d)", backups, total))
 		if err != nil {
 			pterm.Warning.Println("Error listing", conf.Name, err)
-			errs = append(errs, fmt.Errorf("error listing %s: %w", conf.Name, err))
+			errs = append(errs, errors.Wrapf(err, "error listing %s", conf.Name))
 			if s.failFast {
 				return errors.Join(errs...)
 			}
@@ -217,7 +216,7 @@ func (s *Syncer) compact(ctx context.Context, adapter Adapter, filename string) 
 
 	names, err := adapter.ListFileNames(ctx)
 	if err != nil {
-		return fmt.Errorf("error listing file names for destinations %s: %w", conf.Name, err)
+		return errors.Wrapf(err, "error listing file names for destinations %s", conf.Name)
 	}
 	names = utils.FilterBackupFileNames(names, filename)
 	if len(names) <= keep {
@@ -237,7 +236,7 @@ func (s *Syncer) compact(ctx context.Context, adapter Adapter, filename string) 
 			slog.String("target", name),
 		)
 		if err := adapter.Del(ctx, name); err != nil {
-			return fmt.Errorf("error deleting old backup: %w", err)
+			return errors.Wrapf(err, "error deleting old backup")
 		}
 	}
 	return nil

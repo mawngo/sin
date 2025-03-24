@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"archive/zip"
-	"errors"
 	"fmt"
+	"github.com/mawngo/go-errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"io"
@@ -63,12 +63,12 @@ func NewFileCmd(app *core.App) *cobra.Command {
 				if isdir {
 					if err := zipDir(source, dest); err != nil {
 						_ = os.Remove(dest)
-						return fmt.Errorf("error creating backup %w", err)
+						return errors.Wrapf(err, "error creating backup")
 					}
 				} else {
 					if err := utils.CopyFile(app.Ctx, source, dest); err != nil {
 						_ = os.Remove(dest)
-						return fmt.Errorf("error creating backup %w", err)
+						return errors.Wrapf(err, "error creating backup")
 					}
 				}
 				pterm.Println("Local backup created took", time.Since(start).String())
