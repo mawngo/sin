@@ -37,6 +37,7 @@ func NewCLI(app *core.App) *CLI {
 	command.PersistentFlags().BoolVar(&flags.FailFast, "ff", flags.FailFast, "enable fail-fast mode")
 	command.PersistentFlags().IntVar(&flags.Keep, "keep", flags.Keep, "number of backups to keep")
 	command.PersistentFlags().BoolVar(&flags.AutomaticEnv, "env", flags.AutomaticEnv, "(experimental) enable automatic environment binding")
+	command.PersistentFlags().BoolVar(&flags.NoMkdir, "no-mkdir", flags.NoMkdir, "does not create local backup directory if it not exist")
 
 	command.AddCommand(NewListCmd(app))
 	command.AddCommand(NewPullCmd(app))

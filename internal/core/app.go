@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/getsentry/sentry-go"
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/mawngo/go-errors"
 	"github.com/pterm/pterm"
 	slogmulti "github.com/samber/slog-multi"
 	slogsentry "github.com/samber/slog-sentry/v2"
@@ -27,6 +27,7 @@ type AppInitConfig struct {
 	AutomaticEnv bool
 	FailFast     bool
 	Keep         int
+	NoMkdir      bool
 }
 
 type App struct {
@@ -63,8 +64,7 @@ type Config struct {
 // Init setup application core.
 func (app *App) Init(c AppInitConfig) error {
 	app.Config = Config{
-		Keep:          -1,
-		BackupTempDir: ".",
+		Keep: -1,
 	}
 	app.Revision = loadRevision()
 	app.Ctx, app.cancel = context.WithCancel(context.Background())
@@ -83,12 +83,27 @@ func (app *App) Init(c AppInitConfig) error {
 	if c.Keep > 0 {
 		app.Keep = c.Keep
 	}
+	if app.BackupTempDir == "" {
+		app.BackupTempDir = "."
+	}
 
 	if err := setupLogging(app); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(app.BackupTempDir, os.ModePerm); err != nil {
-		return err
+
+	if c.NoMkdir {
+		if info, err := os.Stat(app.BackupTempDir); err != nil || !info.IsDir() {
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return errors.Wrapf(err, "error checking backup temp dir %s", app.BackupTempDir)
+			}
+			if info != nil && !info.IsDir() {
+				return errors.New("backup temp dir is not a directory " + app.BackupTempDir)
+			}
+		}
+	} else {
+		if err := os.MkdirAll(app.BackupTempDir, os.ModePerm); err != nil {
+			return err
+		}
 	}
 
 	// Handle the lock file.
