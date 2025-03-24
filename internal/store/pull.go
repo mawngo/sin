@@ -2,11 +2,12 @@ package store
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"github.com/mawngo/go-errors"
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"sin/internal/core"
 	"sin/internal/utils"
@@ -17,6 +18,18 @@ import (
 
 func (s *Syncer) Pull(ctx context.Context, filename string, adapterNames ...string) error {
 	filename = strings.TrimSuffix(filename, core.BackupFileExt)
+
+	if _, err := os.Stat(s.pullTargetDir); err != nil {
+		if s.failFast {
+			return errors.Wrapf(err, "cannot access local backup directory %s", s.pullTargetDir)
+		}
+		pterm.Error.Println("Cannot access local backup directory:", err.Error())
+		slog.Error("Cannot access local backup directory",
+			slog.String("target", s.pullTargetDir),
+			slog.Any("err", err))
+		return nil
+	}
+
 	pterm.Println("Pulling to", s.pullTargetDir)
 
 	downloaders := lo.FilterMap(s.adapters, func(adapter Adapter, _ int) (Downloader, bool) {
