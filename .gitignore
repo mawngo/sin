@@ -3,11 +3,13 @@
 /build/
 /var/
 /.db/
+/dist/
 
 *.sinlog
 *.sinbak
 *.sha256.txt
 *.log
+*.service
 
 *.db
 *.exe
