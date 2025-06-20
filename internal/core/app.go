@@ -48,7 +48,7 @@ type Config struct {
 	// BackupTempDir the directory for storing created backup.
 	BackupTempDir string `json:"backupTempDir"`
 	// KeepTempFile does not remove recently created backup after sync.
-	KeepTempFile bool `json:"KeepTempFile"`
+	KeepTempFile bool `json:"keepTempFile"`
 
 	// Number of backups to keep.
 	Keep int `json:"keep"`
