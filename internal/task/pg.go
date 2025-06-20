@@ -38,7 +38,7 @@ func NewSyncPostgres(app *core.App, syncer *store.Syncer, config SyncPostgresCon
 		return nil, errors.New("invalid connection string uri")
 	}
 
-	if config.PGDumpPath != "" {
+	if config.PGDumpPath != "" && strings.ContainsRune(config.PGDumpPath, os.PathSeparator) {
 		if err := validateFilePath(config.PGDumpPath, "pg_dump"); err != nil {
 			return nil, err
 		}

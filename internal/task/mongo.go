@@ -41,7 +41,7 @@ func NewSyncMongo(app *core.App, syncer *store.Syncer, config SyncMongoConfig) (
 		useConfigFile = true
 	}
 
-	if config.MongodumpPath != "" {
+	if config.MongodumpPath != "" && strings.ContainsRune(config.MongodumpPath, os.PathSeparator) {
 		if err := validateFilePath(config.MongodumpPath, "mongodump"); err != nil {
 			return nil, err
 		}
