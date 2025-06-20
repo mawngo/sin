@@ -125,6 +125,7 @@ func (p *syncPostgres) ExecSync() error {
 		err = errors.Join(err, os.Remove(dest))
 	} else {
 		err = errors.Join(err, utils.CreateFileSHA256Checksum(dest))
+		pterm.Printf("%sLocal backup are kept\n", prefix)
 	}
 	return err
 }
