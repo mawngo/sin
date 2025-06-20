@@ -70,7 +70,7 @@ func (p *syncPostgres) ExecSync() error {
 	}
 
 	dest := filepath.Join(p.app.Config.BackupTempDir, p.destFileName)
-	dumpArgs := []string{"-d", p.URI}
+	dumpArgs := []string{"-d", p.URI, "-v"}
 
 	pterm.Printf("%sCreating local backup\n", prefix)
 
@@ -82,7 +82,6 @@ func (p *syncPostgres) ExecSync() error {
 
 	command := exec.CommandContext(p.app.Ctx, p.PGDumpPath, dumpArgs...)
 	command.Stderr = os.Stderr
-	var w io.Writer = f
 	out, err := command.StdoutPipe()
 	if err != nil {
 		return errors.Wrapf(err, "error creating stdout pipe")
@@ -90,11 +89,13 @@ func (p *syncPostgres) ExecSync() error {
 
 	start := time.Now()
 	err = (func() error {
+		defer f.Close()
+		var w io.Writer = f
 		if p.EnableGzip {
 			gzw := gzip.NewWriter(w)
 			defer gzw.Close()
 			defer gzw.Flush()
-			w = gzip.NewWriter(f)
+			w = gzw
 		}
 		if err := command.Start(); err != nil {
 			return errors.Wrapf(err, "error running command")
