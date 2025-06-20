@@ -207,13 +207,20 @@ sin file example/file --config sync_file.json --name mybackup
 Backup using mongodump:
 
 ```shell
-sin mongo mongodb://localhost:27017 --config config.json --name testbackup_pg --gzip
+sin mongo mongodb://localhost:27017 --config config.json --name testbackup --gzip
+
+# Restore using mongorestore
+mongorestore --archive --gzip -v testbackup.gz.sinbak
 ```
 
 Backup using pg_dump:
 
 ```shell
-sin pg postgresql://localhost:5432 --config config.json --name testbackup_pg --gzip
+sin pg postgresql://localhost:5432 --config config.json --name testbackup --gzip
+
+# Unzip and restore using psql
+gzip -d < testbackup.gz.sinbak > testbackup
+cat testbackup | psql -d postgresql://localhost:5432/dbname
 ```
 
 Use `--help` for more details.
