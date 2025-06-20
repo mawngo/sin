@@ -21,18 +21,18 @@ type SyncMongoConfig struct {
 	URI           string
 	MongodumpPath string
 	EnableGzip    bool
+	Tag           string
 }
 
 type syncMongo struct {
 	app           *core.App
 	syncer        *store.Syncer
-	name          string
 	useConfigFile bool
 	destFileName  string
 	SyncMongoConfig
 }
 
-func NewSyncMongo(app *core.App, syncer *store.Syncer, name string, config SyncMongoConfig) (SyncTask, error) {
+func NewSyncMongo(app *core.App, syncer *store.Syncer, config SyncMongoConfig) (SyncTask, error) {
 	useConfigFile := false
 	if !strings.HasPrefix(config.URI, "mongodb://") && !strings.HasPrefix(config.URI, "mongodb+srv://") {
 		if err := validateFilePath(config.URI, "mongo config"); err != nil {
@@ -50,8 +50,8 @@ func NewSyncMongo(app *core.App, syncer *store.Syncer, name string, config SyncM
 	}
 
 	destFileName := app.Name
-	if name != "" {
-		destFileName += "." + name
+	if config.Tag != "" {
+		destFileName += "." + config.Tag
 	}
 	if config.EnableGzip {
 		destFileName += ".gz"
@@ -60,7 +60,6 @@ func NewSyncMongo(app *core.App, syncer *store.Syncer, name string, config SyncM
 	return &syncMongo{
 		app:             app,
 		syncer:          syncer,
-		name:            name,
 		SyncMongoConfig: config,
 		useConfigFile:   useConfigFile,
 		destFileName:    destFileName + core.BackupFileExt,
@@ -69,8 +68,8 @@ func NewSyncMongo(app *core.App, syncer *store.Syncer, name string, config SyncM
 
 func (f *syncMongo) ExecSync() error {
 	prefix := ""
-	if f.name != "" {
-		prefix = fmt.Sprintf("[%s]: ", f.name)
+	if f.Tag != "" {
+		prefix = fmt.Sprintf("[%s]: ", f.Tag)
 	}
 
 	dest := filepath.Join(f.app.Config.BackupTempDir, f.destFileName)

@@ -24,7 +24,10 @@ func NewFileCmd(app *core.App) *cobra.Command {
 				return
 			}
 
-			syncTask, err := task.NewSyncFile(app, syncer, "", args[0])
+			flags := task.SyncFileConfig{
+				SourcePath: args[0],
+			}
+			syncTask, err := task.NewSyncFile(app, syncer, flags)
 			if err != nil {
 				pterm.Error.Println("Error initialize file task:", err)
 				slog.Error("Fatal error initialize file task",

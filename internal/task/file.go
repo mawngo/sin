@@ -20,60 +20,63 @@ var _ SyncTask = (*syncFile)(nil)
 type syncFile struct {
 	app          *core.App
 	syncer       *store.Syncer
-	name         string
-	source       string
 	isDir        bool
 	destFileName string
+	SyncFileConfig
 }
 
-func NewSyncFile(app *core.App, syncer *store.Syncer, name string, sourcePath string) (SyncTask, error) {
+type SyncFileConfig struct {
+	SourcePath string
+	Tag        string
+}
+
+func NewSyncFile(app *core.App, syncer *store.Syncer, config SyncFileConfig) (SyncTask, error) {
 	isDir := false
 	//nolint:revive
-	if info, err := os.Stat(sourcePath); err != nil {
-		return nil, errors.Wrapf(err, "invalid source file %s", sourcePath)
+	if info, err := os.Stat(config.SourcePath); err != nil {
+		return nil, errors.Wrapf(err, "invalid source file %s", config.SourcePath)
 	} else {
 		isDir = info.IsDir()
 	}
 
 	destFileName := app.Name
-	if name != "" {
-		destFileName += "." + name
+	if config.Tag != "" {
+		destFileName += "." + config.Tag
 	}
 	if isDir {
 		destFileName += ".zip"
 	} else {
-		_, extname, hasExt := strings.Cut(filepath.Base(sourcePath), ".")
+		_, extname, hasExt := strings.Cut(filepath.Base(config.SourcePath), ".")
 		if hasExt {
 			destFileName += "." + extname
 		}
 	}
 
 	return &syncFile{
-		app:          app,
-		syncer:       syncer,
-		name:         name,
-		source:       sourcePath,
-		isDir:        isDir,
-		destFileName: destFileName + core.BackupFileExt,
+		app:            app,
+		syncer:         syncer,
+		isDir:          isDir,
+		destFileName:   destFileName + core.BackupFileExt,
+		SyncFileConfig: config,
 	}, nil
 }
 
 func (f *syncFile) ExecSync() error {
 	prefix := ""
-	if f.name != "" {
-		prefix = fmt.Sprintf("[%s]: ", f.name)
+	if f.Tag != "" {
+		prefix = fmt.Sprintf("[%s]: ", f.Tag)
 	}
 
 	dest := filepath.Join(f.app.Config.BackupTempDir, f.destFileName)
 	pterm.Printf("%sCreating local backup\n", prefix)
 	start := time.Now()
 	if f.isDir {
-		if err := f.zipDir(f.source, dest); err != nil {
+		if err := f.zipDir(f.SourcePath, dest); err != nil {
 			_ = os.Remove(dest)
 			return errors.Wrapf(err, "error creating backup")
 		}
 	} else {
-		if err := utils.CopyFile(f.app.Ctx, f.source, dest); err != nil {
+		if err := utils.CopyFile(f.app.Ctx, f.SourcePath, dest); err != nil {
 			_ = os.Remove(dest)
 			return errors.Wrapf(err, "error creating backup")
 		}

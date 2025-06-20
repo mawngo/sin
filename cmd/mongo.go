@@ -30,7 +30,7 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 			}
 
 			flags.URI = args[0]
-			syncTask, err := task.NewSyncMongo(app, syncer, "", flags)
+			syncTask, err := task.NewSyncMongo(app, syncer, flags)
 			if err != nil {
 				pterm.Error.Println("Error initialize mongo task:", err)
 				slog.Error("Fatal error initialize mongo task",

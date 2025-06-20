@@ -23,17 +23,17 @@ type SyncPostgresConfig struct {
 	URI        string
 	PGDumpPath string
 	EnableGzip bool
+	Tag        string
 }
 
 type syncPostgres struct {
 	app          *core.App
 	syncer       *store.Syncer
-	name         string
 	destFileName string
 	SyncPostgresConfig
 }
 
-func NewSyncPostgres(app *core.App, syncer *store.Syncer, name string, config SyncPostgresConfig) (SyncTask, error) {
+func NewSyncPostgres(app *core.App, syncer *store.Syncer, config SyncPostgresConfig) (SyncTask, error) {
 	if !strings.HasPrefix(config.URI, "postgresql://") {
 		return nil, errors.New("invalid connection string uri")
 	}
@@ -47,8 +47,8 @@ func NewSyncPostgres(app *core.App, syncer *store.Syncer, name string, config Sy
 	}
 
 	destFileName := app.Name
-	if name != "" {
-		destFileName += "." + name
+	if config.Tag != "" {
+		destFileName += "." + config.Tag
 	}
 	if config.EnableGzip {
 		destFileName += ".gz"
@@ -57,7 +57,6 @@ func NewSyncPostgres(app *core.App, syncer *store.Syncer, name string, config Sy
 	return &syncPostgres{
 		app:                app,
 		syncer:             syncer,
-		name:               name,
 		SyncPostgresConfig: config,
 		destFileName:       destFileName + core.BackupFileExt,
 	}, nil
@@ -65,8 +64,8 @@ func NewSyncPostgres(app *core.App, syncer *store.Syncer, name string, config Sy
 
 func (p *syncPostgres) ExecSync() error {
 	prefix := ""
-	if p.name != "" {
-		prefix = fmt.Sprintf("[%s]: ", p.name)
+	if p.Tag != "" {
+		prefix = fmt.Sprintf("[%s]: ", p.Tag)
 	}
 
 	dest := filepath.Join(p.app.Config.BackupTempDir, p.destFileName)

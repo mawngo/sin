@@ -30,7 +30,7 @@ func NewPGCmd(app *core.App) *cobra.Command {
 			}
 
 			flags.URI = args[0]
-			syncTask, err := task.NewSyncPostgres(app, syncer, "", flags)
+			syncTask, err := task.NewSyncPostgres(app, syncer, flags)
 			if err != nil {
 				pterm.Error.Println("Error initialize pg task:", err)
 				slog.Error("Fatal error initialize pg task",
