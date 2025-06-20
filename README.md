@@ -210,7 +210,7 @@ Backup using mongodump:
 sin mongo mongodb://localhost:27017 --config config.json --name testbackup --gzip
 
 # Restore using mongorestore
-mongorestore --archive --gzip -v testbackup.gz.sinbak
+mongorestore --gzip -v --archive=testbackup.gz.sinbak
 ```
 
 Backup using pg_dump:
