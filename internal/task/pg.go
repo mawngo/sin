@@ -34,7 +34,7 @@ type syncPostgres struct {
 }
 
 func NewSyncPostgres(app *core.App, syncer *store.Syncer, config SyncPostgresConfig) (SyncTask, error) {
-	if !strings.HasPrefix(config.URI, "postgresql://") {
+	if !strings.HasPrefix(config.URI, "postgresql://") && !strings.HasPrefix(config.URI, "postgres://") {
 		return nil, errors.New("invalid connection string uri")
 	}
 
