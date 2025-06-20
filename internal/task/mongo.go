@@ -87,7 +87,7 @@ func (f *syncMongo) ExecSync() error {
 
 	command := exec.CommandContext(f.app.Ctx, f.MongodumpPath, dumpArgs...)
 	command.Stderr = os.Stderr
-	pterm.Printf("%sCreating local backup\n", prefix)
+	pterm.Printf("%sCreating local backup: %s\n", prefix, f.destFileName)
 
 	pterm.Debug.Printf("%sRemoving old local backup\n", prefix)
 	_ = os.Remove(dest)
@@ -112,5 +112,6 @@ func (f *syncMongo) ExecSync() error {
 		err = errors.Join(err, utils.CreateFileSHA256Checksum(dest))
 		pterm.Printf("%sLocal backup are kept\n", prefix)
 	}
+	pterm.Printf("%sSync %s finished\n", prefix, f.destFileName)
 	return err
 }
