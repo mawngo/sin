@@ -57,7 +57,8 @@ file using `--config` options.
     // If true, the local backup will be kept, otherwise will be deleted after synced to targets.
     "keepTempFile": true,
     // Frequency of backup.
-    // Accept crontab or duration. Run once if not specified. 
+    // Accept crontab or duration. Run once if not specified.
+    // End with `!` to run immediately on start.
     "frequency": "*/2 * * * *",
     // Default number of recent backups to keep.
     // Only apply for targets, local backup is always kept 0-1.

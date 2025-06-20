@@ -17,20 +17,30 @@ func Run(ctx context.Context, freq string, fn func() error) error {
 		return fn()
 	}
 
-	if dur, err := time.ParseDuration(freq); err == nil {
-		return runInterval(ctx, dur, fn)
+	immediate := false
+	if strings.HasSuffix(freq, "!") {
+		immediate = true
+		freq = strings.TrimSuffix(freq, "!")
 	}
 
-	return runCron(ctx, freq, fn)
+	if dur, err := time.ParseDuration(freq); err == nil {
+		return runInterval(ctx, dur, immediate, fn)
+	}
+
+	return runCron(ctx, freq, immediate, fn)
 }
 
-func runInterval(ctx context.Context, dur time.Duration, fn func() error) error {
+func runInterval(ctx context.Context, dur time.Duration, immediate bool, fn func() error) error {
 	timer := time.NewTimer(dur)
-	if err := fn(); err != nil {
-		return err
+	startWait := time.Now()
+
+	if immediate {
+		if err := fn(); err != nil {
+			return err
+		}
 	}
+
 	for {
-		startWait := time.Now()
 		select {
 		case <-timer.C:
 			if time.Since(startWait) < 10*time.Second {
@@ -39,6 +49,7 @@ func runInterval(ctx context.Context, dur time.Duration, fn func() error) error 
 				slog.Warn("Slow sync process", slog.String("freq", dur.String()))
 			}
 			timer = time.NewTimer(dur)
+			startWait = time.Now()
 			if err := fn(); err != nil {
 				return err
 			}
@@ -48,19 +59,15 @@ func runInterval(ctx context.Context, dur time.Duration, fn func() error) error 
 	}
 }
 
-func runCron(ctx context.Context, freq string, fn func() error) error {
-	immediate := false
-	if strings.HasSuffix(freq, "!") {
-		immediate = true
-		freq = strings.TrimSuffix(freq, "!")
-	}
-
+func runCron(ctx context.Context, freq string, immediate bool, fn func() error) error {
 	c := cron.New(
 		cron.WithContext(ctx),
 		cron.WithLogger(cron.DiscardLogger),
 	)
 	defer c.Stop()
 
+	// Queue the job, so if the job can't keep up with the frequency,
+	// it can still be executed (but only once).
 	jobs := make(chan struct{}, 1)
 	_, err := c.AddFunc(freq, func(ctx context.Context) error {
 		select {
