@@ -26,3 +26,16 @@ func readFile(path string) (string, error) {
 	}
 	return string(b), nil
 }
+
+func removeIfExist(path string) error {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return errors.Wrapf(err, "error removing file")
+	}
+	if err := os.Remove(path); err != nil {
+		return errors.Wrapf(err, "error removing file")
+	}
+	return nil
+}

@@ -69,6 +69,10 @@ func (f *syncFile) ExecSync() error {
 
 	dest := filepath.Join(f.app.Config.BackupTempDir, f.destFileName)
 	pterm.Printf("%sCreating local backup %s\n", prefix, f.destFileName)
+	if err := removeIfExist(dest); err != nil {
+		return errors.Wrapf(err, "error local backup with same name exist")
+	}
+
 	start := time.Now()
 	if f.isDir {
 		if err := f.zipDir(f.SourcePath, dest); err != nil {

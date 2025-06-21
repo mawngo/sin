@@ -102,9 +102,9 @@ func (f *syncMongo) ExecSync() error {
 	command := exec.CommandContext(f.app.Ctx, f.MongodumpPath, dumpArgs...)
 	command.Stderr = os.Stderr
 	pterm.Printf("%sCreating local backup %s\n", prefix, f.destFileName)
-
-	pterm.Debug.Printf("%sRemoving old local backup\n", prefix)
-	_ = os.Remove(dest)
+	if err := removeIfExist(dest); err != nil {
+		return errors.Wrapf(err, "error local backup with same name exist")
+	}
 
 	start := time.Now()
 	if err := command.Run(); err != nil {
