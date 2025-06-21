@@ -41,7 +41,7 @@ func NewSyncFile(app *core.App, syncer *store.Syncer, config SyncFileConfig) (Sy
 
 	destFileName := app.Name
 	if config.Tag != "" {
-		destFileName += "." + config.Tag
+		destFileName = fmt.Sprintf("[%s] %s", config.Tag, destFileName)
 	}
 	if isDir {
 		destFileName += ".zip"

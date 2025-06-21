@@ -60,7 +60,7 @@ func NewSyncPostgres(app *core.App, syncer *store.Syncer, config SyncPostgresCon
 
 	destFileName := app.Name
 	if config.Tag != "" {
-		destFileName += "." + config.Tag
+		destFileName = fmt.Sprintf("[%s] %s", config.Tag, destFileName)
 	}
 	if config.EnableGzip {
 		destFileName += ".gz"
