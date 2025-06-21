@@ -1,11 +1,9 @@
 package task
 
 import (
-	"archive/zip"
 	"fmt"
 	"github.com/mawngo/go-errors"
 	"github.com/pterm/pterm"
-	"io"
 	"os"
 	"path/filepath"
 	"sin/internal/core"
@@ -75,7 +73,7 @@ func (f *syncFile) ExecSync() error {
 
 	start := time.Now()
 	if f.isDir {
-		if err := f.zipDir(f.SourcePath, dest); err != nil {
+		if err := zipDir(f.SourcePath, dest); err != nil {
 			_ = os.Remove(dest)
 			return errors.Wrapf(err, "error creating backup")
 		}
@@ -99,53 +97,4 @@ func (f *syncFile) ExecSync() error {
 	}
 	pterm.Printf("%sSync %s finished\n", prefix, f.destFileName)
 	return err
-}
-
-func (*syncFile) zipDir(src, dst string) (err error) {
-	file, err := os.Create(dst)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
-	w := zip.NewWriter(file)
-	defer w.Close()
-
-	src, _ = filepath.Abs(src)
-	dir := filepath.Dir(src)
-	walker := func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		rel, err := filepath.Rel(dir, path)
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() {
-			// Add a trailing slash for creating dir.
-			// Must use '/', not filepath.Separator.
-			path = fmt.Sprintf("%s%c", rel, '/')
-			_, err = w.Create(path)
-			return err
-		}
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		f, err := w.Create(rel)
-		if err != nil {
-			return err
-		}
-
-		_, err = io.Copy(f, file)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}
-	return filepath.Walk(src, walker)
 }

@@ -1,11 +1,9 @@
 package task
 
 import (
-	"archive/tar"
 	"fmt"
 	"github.com/mawngo/go-errors"
 	"github.com/pterm/pterm"
-	"io"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -36,7 +34,7 @@ type SyncPostgresConfig struct {
 	Compress string
 	// Format is the format option of pg_dump.
 	// However, we only support plain, directory, and custom (default).
-	// For directory format, the output will be bundled into one single file using tar.
+	// For directory format, the output will be bundled into one single file using zip.
 	Format string
 }
 
@@ -99,7 +97,7 @@ func NewSyncPostgres(app *core.App, syncer *store.Syncer, config SyncPostgresCon
 
 	// Handle extension.
 	if config.Format == "directory" {
-		destFileName += ".tar"
+		destFileName += ".zip"
 	} else if config.EnableGzip {
 		destFileName += ".gz"
 	}
@@ -127,51 +125,51 @@ func (p *syncPostgres) ExecSync() error {
 	}
 
 	dest := filepath.Join(p.app.Config.BackupTempDir, p.destFileName)
+	if p.Format == "directory" {
+		dest = strings.TrimSuffix(dest, ".zip"+core.BackupFileExt)
+	}
 	dumpArgs := []string{
 		"-d", p.URI,
 		"-v",
 		"-F", p.Format,
 		"-Z", p.Compress,
-	}
-
-	pterm.Printf("%sCreating local backup %s\n", prefix, p.destFileName)
-
-	pterm.Debug.Printf("%sTruncating old local backup\n", prefix)
-	f, err := os.Create(dest)
-	if err != nil {
-		return errors.Wrapf(err, "error creating backup file %s", dest)
+		"-f", dest,
 	}
 
 	command := exec.CommandContext(p.app.Ctx, p.PGDumpPath, dumpArgs...)
 	command.Stderr = os.Stderr
-	out, err := command.StdoutPipe()
-	if err != nil {
-		return errors.Wrapf(err, "error creating stdout pipe")
+	pterm.Printf("%sCreating local backup %s\n", prefix, p.destFileName)
+
+	if p.Format == "directory" {
+		if err := removeAllIfExist(dest); err != nil {
+			return errors.Wrapf(err, "error local backup directory with same name exist")
+		}
+	} else {
+		if err := removeIfExist(dest); err != nil {
+			return errors.Wrapf(err, "error local backup with same name exist")
+		}
 	}
 
 	start := time.Now()
-	err = (func() error {
-		defer f.Close()
-		var w io.Writer = f
-		if p.EnableGzip {
-			tarWriter := tar.NewWriter(w)
-			defer tarWriter.Close()
-			defer tarWriter.Flush()
-			w = tarWriter
+	if err := command.Run(); err != nil {
+		return errors.Wrapf(err, "error running pg_dump")
+	}
+
+	if p.Format == "directory" {
+		dumpDir := dest
+		dest = dest + ".zip" + core.BackupFileExt
+		pterm.Printf("%sZiping pg_dump output directory %s\n", prefix, dumpDir)
+		if err := removeIfExist(dest); err != nil {
+			return errors.Wrapf(err, "error local backup with same name exist")
 		}
-		if err := command.Start(); err != nil {
-			return errors.Wrapf(err, "error running command")
+
+		if err := zipDir(dumpDir, dest); err != nil {
+			_ = os.Remove(dest)
+			return errors.Wrapf(err, "error zipping pg_dump output directory")
 		}
-		if _, err := io.Copy(w, out); err != nil {
-			return errors.Wrapf(err, "error piping pg_dump output to file %s", dest)
+		if err := os.RemoveAll(dumpDir); err != nil {
+			pterm.Warning.Printf("%sCannot remove pg_dump output directory %s: %s\n", prefix, dumpDir, err.Error())
 		}
-		if err := command.Wait(); err != nil {
-			return errors.Wrapf(err, "error running pg_dump")
-		}
-		return nil
-	})()
-	if err != nil {
-		return err
 	}
 
 	pterm.Printf("%sLocal backup %s created took %s\n", prefix, p.destFileName, time.Since(start).String())
@@ -183,7 +181,7 @@ func (p *syncPostgres) ExecSync() error {
 		pterm.Printf("%sLocal backup are kept as there are no targets configured\n", prefix)
 		return utils.CreateFileSHA256Checksum(dest)
 	}
-	err = p.syncer.Sync(p.app.Ctx, dest, start)
+	err := p.syncer.Sync(p.app.Ctx, dest, start)
 	if !p.app.KeepTempFile {
 		err = errors.Join(err, os.Remove(dest))
 	} else {

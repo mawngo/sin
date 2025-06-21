@@ -218,6 +218,15 @@ Backup using pg_dump:
 ```shell
 sin pg postgresql://localhost:5432 --config config.json --name testbackup --gzip
 
+# Restore using pg_restore
+pg_restore -d postgresql://localhost:5432 testbackup.gz.sinbak
+```
+
+Backup using pg_dump with plain format:
+
+```shell
+sin pg postgresql://localhost:5432 --config config.json --name testbackup --gzip --format=plain
+
 # Unzip and restore using psql
 gzip -d < testbackup.gz.sinbak > testbackup
 cat testbackup | psql -d postgresql://localhost:5432/dbname
