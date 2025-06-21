@@ -5,6 +5,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"io"
 	"os"
+	"strconv"
 )
 
 func MapToStruct(m map[string]any, s any) error {
@@ -38,4 +39,11 @@ func FileSHA256Checksum(path string) ([]byte, error) {
 		return nil, err
 	}
 	return h.Sum(nil), nil
+}
+
+func IsNumeric(str string) bool {
+	if _, err := strconv.Atoi(str); err == nil {
+		return true
+	}
+	return false
 }

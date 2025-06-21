@@ -13,6 +13,7 @@ func NewPGCmd(app *core.App) *cobra.Command {
 	flags := task.SyncPostgresConfig{
 		PGDumpPath: "pg_dump",
 		EnableGzip: false,
+		Format:     "custom",
 	}
 
 	command := cobra.Command{
@@ -49,5 +50,7 @@ func NewPGCmd(app *core.App) *cobra.Command {
 	}
 	command.Flags().StringVar(&flags.PGDumpPath, "pg_dump", flags.PGDumpPath, "pg_dump command/binary location")
 	command.Flags().BoolVar(&flags.EnableGzip, "gzip", flags.EnableGzip, "enable gzip compression")
+	command.Flags().StringVar(&flags.Compress, "compress", flags.Compress, "specify compression algorithm or/and level")
+	command.Flags().StringVar(&flags.Format, "format", flags.Format, "specify output format")
 	return &command
 }
