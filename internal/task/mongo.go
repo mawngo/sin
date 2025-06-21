@@ -38,7 +38,7 @@ func NewSyncMongo(app *core.App, syncer *store.Syncer, config SyncMongoConfig) (
 		if err := validateFilePath(config.URI, "mongo config"); err != nil {
 			return nil, err
 		}
-		v, err := readFile(config.URI)
+		v, err := readFileTrim(config.URI)
 		if err != nil {
 			return nil, err
 		}

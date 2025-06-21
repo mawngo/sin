@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type SyncTask interface {
@@ -24,12 +25,12 @@ func validateFilePath(path string, msg string) error {
 	return nil
 }
 
-func readFile(path string) (string, error) {
+func readFileTrim(path string) (string, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return "", errors.Wrapf(err, "error reading file")
 	}
-	return string(b), nil
+	return strings.TrimSpace(string(b)), nil
 }
 
 func removeIfExist(path string) error {

@@ -53,7 +53,7 @@ func NewSyncPostgres(app *core.App, syncer *store.Syncer, config SyncPostgresCon
 		if err := validateFilePath(config.URI, "postgres connection string"); err != nil {
 			return nil, err
 		}
-		v, err := readFile(config.URI)
+		v, err := readFileTrim(config.URI)
 		if err != nil {
 			return nil, err
 		}
