@@ -152,6 +152,19 @@ func (p *syncPostgres) ExecSync() error {
 
 	start := time.Now()
 	if err := command.Run(); err != nil {
+		if p.Format == "directory" {
+			err = errors.Join(
+				removeAllIfExist(dest+".error"),
+				os.Rename(dest, dest+".error"),
+			)
+			if err != nil {
+				pterm.Warning.Printf("%sFailed to rename errored backup directory %s\n", prefix, dest)
+			}
+		} else {
+			if err := os.Rename(dest, dest+".error"); err != nil {
+				pterm.Warning.Printf("%sFailed to rename errored backup %s\n", prefix, p.destFileName)
+			}
+		}
 		return errors.Wrapf(err, "error running pg_dump")
 	}
 

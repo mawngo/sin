@@ -108,6 +108,9 @@ func (f *syncMongo) ExecSync() error {
 
 	start := time.Now()
 	if err := command.Run(); err != nil {
+		if err := os.Rename(dest, dest+".error"); err != nil {
+			pterm.Warning.Printf("%sFailed to rename errored backup %s\n", prefix, f.destFileName)
+		}
 		return errors.Wrapf(err, "error running mongodump")
 	}
 	pterm.Printf("%sLocal backup %s created took %s\n", prefix, f.destFileName, time.Since(start).String())
