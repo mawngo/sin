@@ -34,8 +34,20 @@ type syncPostgres struct {
 }
 
 func NewSyncPostgres(app *core.App, syncer *store.Syncer, config SyncPostgresConfig) (SyncTask, error) {
-	if !strings.HasPrefix(config.URI, "postgresql://") && !strings.HasPrefix(config.URI, "postgres://") {
-		return nil, errors.New("invalid connection string uri")
+	if !isPostgresConnectionString(config.URI) {
+		if err := validateFilePath(config.URI, "postgres connection string"); err != nil {
+			return nil, err
+		}
+		v, err := readFile(config.URI)
+		if err != nil {
+			return nil, err
+		}
+		// Support connection string in a text file.
+		if isPostgresConnectionString(v) {
+			config.URI = v
+		} else {
+			return nil, errors.New("invalid connection string uri")
+		}
 	}
 
 	if config.PGDumpPath != "" && strings.ContainsRune(config.PGDumpPath, os.PathSeparator) {
@@ -60,6 +72,10 @@ func NewSyncPostgres(app *core.App, syncer *store.Syncer, config SyncPostgresCon
 		SyncPostgresConfig: config,
 		destFileName:       destFileName + core.BackupFileExt,
 	}, nil
+}
+
+func isPostgresConnectionString(uri string) bool {
+	return strings.HasPrefix(uri, "postgresql://") || strings.HasPrefix(uri, "postgres://")
 }
 
 func (p *syncPostgres) ExecSync() error {

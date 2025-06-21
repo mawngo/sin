@@ -34,11 +34,21 @@ type syncMongo struct {
 
 func NewSyncMongo(app *core.App, syncer *store.Syncer, config SyncMongoConfig) (SyncTask, error) {
 	useConfigFile := false
-	if !strings.HasPrefix(config.URI, "mongodb://") && !strings.HasPrefix(config.URI, "mongodb+srv://") {
+	if !isMongoConnectionString(config.URI) {
 		if err := validateFilePath(config.URI, "mongo config"); err != nil {
 			return nil, err
 		}
-		useConfigFile = true
+		v, err := readFile(config.URI)
+		if err != nil {
+			return nil, err
+		}
+
+		// Support connection string in a text file, not necessary mongo config file format.
+		if isMongoConnectionString(v) {
+			config.URI = v
+		} else {
+			useConfigFile = true
+		}
 	}
 
 	if config.MongodumpPath != "" && strings.ContainsRune(config.MongodumpPath, os.PathSeparator) {
@@ -64,6 +74,10 @@ func NewSyncMongo(app *core.App, syncer *store.Syncer, config SyncMongoConfig) (
 		useConfigFile:   useConfigFile,
 		destFileName:    destFileName + core.BackupFileExt,
 	}, nil
+}
+
+func isMongoConnectionString(uri string) bool {
+	return strings.HasPrefix(uri, "mongodb://") || strings.HasPrefix(uri, "mongodb+srv://")
 }
 
 func (f *syncMongo) ExecSync() error {

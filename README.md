@@ -223,6 +223,19 @@ gzip -d < testbackup.gz.sinbak > testbackup
 cat testbackup | psql -d postgresql://localhost:5432/dbname
 ```
 
+Use file instead of connection string uri:
+
+```shell
+# Using raw text
+echo "mongodb://localhost:27017" > conn.txt
+sin mongo conn.txt --config config.json --name testbackup --gzip
+
+# Using mongo config file
+# https://www.mongodb.com/docs/database-tools/mongodump/#std-option-mongodump.--config
+echo "uri: mongodb://mongodb0.example.com:27017" > conn.yaml
+sin mongo conn.yaml --config config.json --name testbackup --gzip
+```
+
 Use `--help` for more details.
 
 ```

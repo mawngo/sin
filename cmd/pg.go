@@ -16,7 +16,7 @@ func NewPGCmd(app *core.App) *cobra.Command {
 	}
 
 	command := cobra.Command{
-		Use:   "pg <uri>",
+		Use:   "pg <uri/file>",
 		Args:  cobra.ExactArgs(1),
 		Short: "Run backup for postgres using pg_dump",
 		Run: func(_ *cobra.Command, args []string) {

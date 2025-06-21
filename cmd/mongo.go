@@ -16,7 +16,7 @@ func NewMongoCmd(app *core.App) *cobra.Command {
 	}
 
 	command := cobra.Command{
-		Use:   "mongo <uri/config file>",
+		Use:   "mongo <uri/file>",
 		Args:  cobra.ExactArgs(1),
 		Short: "Run backup for mongo using mongodump",
 		Run: func(_ *cobra.Command, args []string) {
