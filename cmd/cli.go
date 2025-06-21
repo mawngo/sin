@@ -34,9 +34,10 @@ func NewCLI(app *core.App) *CLI {
 	command.Flags().SortFlags = false
 	command.PersistentFlags().StringVarP(&flags.ConfigFile, "config", "c", flags.ConfigFile, "specify config file")
 	command.PersistentFlags().StringVar(&flags.Name, "name", flags.Name, "name of output backup and log file")
-	command.PersistentFlags().BoolVar(&flags.FailFast, "ff", flags.FailFast, "enable fail-fast mode")
-	command.PersistentFlags().IntVar(&flags.Keep, "keep", flags.Keep, "number of backups to keep")
-	command.PersistentFlags().BoolVar(&flags.AutomaticEnv, "env", flags.AutomaticEnv, "(experimental) enable automatic environment binding")
+	command.PersistentFlags().BoolVar(&flags.EnableFailFast, "ff", flags.EnableFailFast, "enable fail-fast mode")
+	command.PersistentFlags().IntVar(&flags.Keep, "keep", flags.Keep, "number of local backups to keep")
+	command.PersistentFlags().BoolVar(&flags.EnableAutomaticEnv, "env", flags.EnableAutomaticEnv, "(experimental) enable automatic environment binding")
+	command.PersistentFlags().BoolVar(&flags.EnableLocalMode, "local", flags.EnableLocalMode, "(local mode) create backup in current directory without syncing")
 	command.PersistentFlags().BoolVar(&flags.NoMkdir, "no-mkdir", flags.NoMkdir, "does not create local backup directory if it not exist")
 
 	command.AddCommand(NewListCmd(app))

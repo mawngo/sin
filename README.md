@@ -258,8 +258,10 @@ Flags:
   -c, --config string   specify config file
       --name string     name of output backup and log file
       --ff              enable fail-fast mode
-      --keep int        number of backups to keep
+      --keep int        number of local backups to keep
       --env             (experimental) enable automatic environment binding
+      --local           (local mode) create backup in current directory without syncing
+      --no-mkdir        does not create local backup directory if it not exist
   -h, --help            help for sin
 
 Use "sin [command] --help" for more information about a command.

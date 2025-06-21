@@ -22,12 +22,13 @@ import (
 )
 
 type AppInitConfig struct {
-	ConfigFile   string
-	Name         string
-	AutomaticEnv bool
-	FailFast     bool
-	Keep         int
-	NoMkdir      bool
+	ConfigFile         string
+	Name               string
+	EnableAutomaticEnv bool
+	EnableFailFast     bool
+	Keep               int
+	NoMkdir            bool
+	EnableLocalMode    bool
 }
 
 type App struct {
@@ -50,7 +51,8 @@ type Config struct {
 	// KeepTempFile does not remove recently created backup after sync.
 	KeepTempFile bool `json:"keepTempFile"`
 
-	// Number of backups to keep.
+	// Keep Number of backups to keep.
+	// Only apply for targets, local backup is always kept 0-1.
 	Keep int `json:"keep"`
 
 	// Frequency of the backup process.
@@ -68,7 +70,7 @@ func (app *App) Init(c AppInitConfig) error {
 	}
 	app.Revision = loadRevision()
 	app.Ctx, app.cancel = context.WithCancel(context.Background())
-	if err := loadJSONConfigInto(&app.Config, c.ConfigFile, c.AutomaticEnv); err != nil {
+	if err := loadJSONConfigInto(&app.Config, c.ConfigFile, c.EnableAutomaticEnv, c.EnableLocalMode); err != nil {
 		return err
 	}
 	if c.Name != "" {
@@ -77,8 +79,8 @@ func (app *App) Init(c AppInitConfig) error {
 	if app.Name == "" {
 		app.Name = DefaultAppName
 	}
-	if c.FailFast {
-		app.FailFast = c.FailFast
+	if c.EnableFailFast {
+		app.FailFast = c.EnableFailFast
 	}
 	if c.Keep > 0 {
 		app.Keep = c.Keep
@@ -136,7 +138,7 @@ func (app *App) Init(c AppInitConfig) error {
 	slog.Info("Initialized",
 		slog.String("name", app.Name),
 		slog.String("revision", app.Revision),
-		slog.Bool("env", c.AutomaticEnv))
+		slog.Bool("env", c.EnableAutomaticEnv))
 	return nil
 }
 
@@ -217,7 +219,16 @@ func loadRevision() string {
 	return revision
 }
 
-func loadJSONConfigInto(cfg *Config, path string, automaticEnv bool) error {
+func loadJSONConfigInto(cfg *Config, path string, automaticEnv bool, localMode bool) error {
+	if localMode {
+		if path != "" || automaticEnv {
+			return errors.New("must not specify config file or enable automatic env when using local mode")
+		}
+		cfg.BackupTempDir = "."
+		cfg.KeepTempFile = true
+		return nil
+	}
+
 	cfgJSONBytes, err := json.Marshal(cfg)
 	if err != nil {
 		return err
@@ -252,7 +263,7 @@ func loadJSONConfigInto(cfg *Config, path string, automaticEnv bool) error {
 	} else {
 		pterm.Warning.Println("No config file specified via --config")
 		if !automaticEnv {
-			return errors.New("must enable automatic env if not specify a config file")
+			return errors.New("must enable automatic env or local mode if not specify a config file")
 		}
 	}
 	return nil
