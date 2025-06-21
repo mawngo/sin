@@ -71,7 +71,7 @@ func (p *syncPostgres) ExecSync() error {
 	dest := filepath.Join(p.app.Config.BackupTempDir, p.destFileName)
 	dumpArgs := []string{"-d", p.URI, "-v"}
 
-	pterm.Printf("%sCreating local backup: %s\n", prefix, p.destFileName)
+	pterm.Printf("%sCreating local backup %s\n", prefix, p.destFileName)
 
 	pterm.Debug.Printf("%sTruncating old local backup\n", prefix)
 	f, err := os.Create(dest)
@@ -111,7 +111,7 @@ func (p *syncPostgres) ExecSync() error {
 		return err
 	}
 
-	pterm.Printf("%sLocal backup created took %s\n", prefix, time.Since(start).String())
+	pterm.Printf("%sLocal backup %s created took %s\n", prefix, p.destFileName, time.Since(start).String())
 	slog.Info(fmt.Sprintf("%sLocal backup created", prefix),
 		slog.String("name", p.app.Name),
 		slog.String("took", time.Since(start).String()),

@@ -68,7 +68,7 @@ func (f *syncFile) ExecSync() error {
 	}
 
 	dest := filepath.Join(f.app.Config.BackupTempDir, f.destFileName)
-	pterm.Printf("%sCreating local backup: %s\n", prefix, f.destFileName)
+	pterm.Printf("%sCreating local backup %s\n", prefix, f.destFileName)
 	start := time.Now()
 	if f.isDir {
 		if err := f.zipDir(f.SourcePath, dest); err != nil {
@@ -81,7 +81,7 @@ func (f *syncFile) ExecSync() error {
 			return errors.Wrapf(err, "error creating backup")
 		}
 	}
-	pterm.Printf("%sLocal backup created took %s\n", prefix, time.Since(start).String())
+	pterm.Printf("%sLocal backup %s created took %s\n", prefix, f.destFileName, time.Since(start).String())
 	if f.syncer.AdaptersCount() == 0 {
 		pterm.Printf("%sLocal backup are kept as there are no targets configured\n", prefix)
 		return utils.CreateFileSHA256Checksum(dest)
