@@ -11,6 +11,7 @@ import (
 	"sin/internal/core"
 	"sin/internal/store"
 	"sin/internal/utils"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -36,6 +37,8 @@ type SyncPostgresConfig struct {
 	// However, we only support plain, directory, and custom (default).
 	// For directory format, the output will be bundled into one single file using zip.
 	Format string
+	// NumberOfJobs parallel pg_dump, only applicable to directory format.
+	NumberOfJobs int
 }
 
 type syncPostgres struct {
@@ -141,6 +144,9 @@ func (p *syncPostgres) ExecSync() error {
 	pterm.Printf("%sCreating local backup %s\n", prefix, p.destFileName)
 
 	if p.Format == "directory" {
+		if p.NumberOfJobs > 0 {
+			dumpArgs = append([]string{"-j", strconv.Itoa(p.NumberOfJobs)}, dumpArgs...)
+		}
 		if err := removeAllIfExist(dest); err != nil {
 			return errors.Wrapf(err, "error local backup directory with same name exist")
 		}
