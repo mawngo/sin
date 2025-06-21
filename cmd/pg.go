@@ -52,5 +52,6 @@ func NewPGCmd(app *core.App) *cobra.Command {
 	command.Flags().BoolVar(&flags.EnableGzip, "gzip", flags.EnableGzip, "enable gzip compression")
 	command.Flags().StringVar(&flags.Compress, "compress", flags.Compress, "specify compression algorithm or/and level")
 	command.Flags().StringVar(&flags.Format, "format", flags.Format, "specify output format")
+	command.Flags().IntVar(&flags.NumberOfJobs, "number-of-jobs", flags.NumberOfJobs, "specify number of concurrent jobs when output format is directory")
 	return &command
 }
